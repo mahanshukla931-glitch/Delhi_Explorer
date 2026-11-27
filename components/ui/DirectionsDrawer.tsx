@@ -7,7 +7,6 @@ import {
   Car,
   Footprints,
   Bike,
-  CornerUpRight,
   ChevronDown,
   ChevronUp,
   ArrowUpDown,
@@ -50,7 +49,7 @@ export function DirectionsDrawer({
   isLoading = false,
   onStartNavigation,
 }: DirectionsDrawerProps) {
-  const [showSteps, setShowSteps] = useState(true);
+  const [showSteps, setShowSteps] = useState(false); // Collapsed on mobile to show map & route clearly
 
   // Predictive search inputs
   const [originInput, setOriginInput] = useState("");
@@ -69,8 +68,8 @@ export function DirectionsDrawer({
   // Sync inputs when a new route is received
   useEffect(() => {
     if (route) {
-      setOriginInput(route.originName || "My Location");
-      setDestInput(route.destinationName || "Selected Destination");
+      setOriginInput(route.originName || "Starting Point");
+      setDestInput(route.destinationName || "Destination");
       setCurrentOriginCoords(route.originCoords);
       setCurrentDestCoords(route.destinationCoords);
     }
@@ -85,8 +84,8 @@ export function DirectionsDrawer({
       ...(field === "origin" && route?.originCoords
         ? [
             {
-              name: "Your Current Location",
-              subtext: "GPS Live Position",
+              name: "Your Live Location (GPS)",
+              subtext: "Current GPS Position",
               coordinates: route.originCoords,
               isCurrentLocation: true,
             },
@@ -150,7 +149,7 @@ export function DirectionsDrawer({
         setIsSearchingSuggestions(false);
       }
       setSuggestions(matchedLandmarks.length > 0 ? matchedLandmarks : defaults);
-    }, 400);
+    }, 350);
   };
 
   const handleSelectSuggestion = (suggestion: SearchSuggestion) => {
@@ -212,18 +211,22 @@ export function DirectionsDrawer({
   if (!isOpen || !route) return null;
 
   return (
-    <div className="fixed top-20 sm:top-4 right-3 sm:right-4 z-40 w-[calc(100vw-24px)] sm:w-[390px] max-h-[85vh] bg-white/95 dark:bg-[#1f2023]/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/90 dark:border-white/10 flex flex-col overflow-hidden animate-in slide-in-from-right duration-250 select-none text-slate-900 dark:text-slate-100">
+    <div className="fixed bottom-0 sm:bottom-auto sm:top-4 sm:right-4 left-0 sm:left-auto z-40 w-full sm:w-[400px] max-h-[85vh] sm:max-h-[88vh] bg-white/95 dark:bg-[#1c1d21]/95 backdrop-blur-2xl rounded-t-[28px] sm:rounded-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.25)] sm:shadow-2xl border-t sm:border border-slate-200/90 dark:border-white/10 flex flex-col overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-right duration-300 select-none text-slate-900 dark:text-slate-100">
+      {/* Mobile Drawer Pull Indicator Handle */}
+      <div className="sm:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+
       {/* Top Header Card */}
-      <div className="p-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
-        <div className="flex items-center justify-between mb-3">
+      <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
+        <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md">
-              <Navigation className="w-4.5 h-4.5 fill-white" />
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md">
+              <Navigation className="w-4 h-4 fill-white" />
             </div>
             <div>
               <h3 className="text-sm font-extrabold leading-tight">Directions</h3>
-              <span className="text-[10px] text-slate-400 font-medium">
-                Live Turn-by-Turn Navigation
+              <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Live Google Maps Style Routing
               </span>
             </div>
           </div>
@@ -238,7 +241,7 @@ export function DirectionsDrawer({
         </div>
 
         {/* Travel Mode Switcher Tabs */}
-        <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl mb-3">
+        <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl mb-2.5">
           <button
             onClick={() => onChangeMode("driving")}
             disabled={isLoading}
@@ -280,14 +283,14 @@ export function DirectionsDrawer({
         </div>
 
         {/* Dual Predictive Search Inputs (Origin & Destination) */}
-        <div className="relative bg-slate-50 dark:bg-black/30 p-2.5 rounded-2xl border border-slate-200 dark:border-white/10 mb-3 space-y-2">
-          {/* Origin Input */}
-          <div className="flex items-center gap-2 bg-white dark:bg-white/5 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 focus-within:border-blue-500 transition-colors">
+        <div className="relative bg-slate-50 dark:bg-black/30 p-2 rounded-2xl border border-slate-200 dark:border-white/10 mb-2.5 space-y-1.5">
+          {/* Origin Input (A) */}
+          <div className="flex items-center gap-2 bg-white dark:bg-white/5 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 focus-within:border-emerald-500 transition-colors">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
             <input
               type="text"
               value={originInput}
-              placeholder="Choose starting point / Live GPS..."
+              placeholder="Starting point / Live Location..."
               onChange={(e) => {
                 setOriginInput(e.target.value);
                 setActiveField("origin");
@@ -307,15 +310,15 @@ export function DirectionsDrawer({
                   setActiveField("origin");
                   searchPredictions("", "origin");
                 }}
-                className="text-slate-400 hover:text-slate-600 text-xs"
+                className="text-slate-400 hover:text-slate-600 text-xs px-1"
               >
                 ×
               </button>
             )}
           </div>
 
-          {/* Destination Input */}
-          <div className="flex items-center gap-2 bg-white dark:bg-white/5 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 focus-within:border-blue-500 transition-colors">
+          {/* Destination Input (B) */}
+          <div className="flex items-center gap-2 bg-white dark:bg-white/5 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 focus-within:border-rose-500 transition-colors">
             <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
             <input
               type="text"
@@ -340,7 +343,7 @@ export function DirectionsDrawer({
                   setActiveField("destination");
                   searchPredictions("", "destination");
                 }}
-                className="text-slate-400 hover:text-slate-600 text-xs"
+                className="text-slate-400 hover:text-slate-600 text-xs px-1"
               >
                 ×
               </button>
@@ -352,7 +355,7 @@ export function DirectionsDrawer({
             onClick={handleSwapEndpoints}
             title="Swap Origin and Destination"
             aria-label="Swap Route Endpoints"
-            className="absolute right-4 top-[50%] -translate-y-[50%] p-1.5 rounded-full bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all shadow-sm cursor-pointer"
+            className="absolute right-3.5 top-[50%] -translate-y-[50%] p-1.5 rounded-full bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all shadow-sm cursor-pointer"
           >
             <ArrowUpDown className="w-3.5 h-3.5" />
           </button>
@@ -360,7 +363,7 @@ export function DirectionsDrawer({
 
         {/* Predictive Suggestions Dropdown */}
         {activeField && suggestions.length > 0 && (
-          <div className="mb-3 max-h-48 overflow-y-auto bg-white dark:bg-[#18191c] rounded-2xl border border-blue-200 dark:border-blue-900/50 shadow-lg divide-y divide-slate-100 dark:divide-white/5 animate-in fade-in duration-150">
+          <div className="mb-2.5 max-h-44 overflow-y-auto bg-white dark:bg-[#18191c] rounded-2xl border border-blue-200 dark:border-blue-900/50 shadow-lg divide-y divide-slate-100 dark:divide-white/5 animate-in fade-in duration-150">
             <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
               <span>Predictive Locations ({activeField})</span>
               {isSearchingSuggestions && <Loader2 className="w-3 h-3 animate-spin text-blue-500" />}
@@ -390,12 +393,12 @@ export function DirectionsDrawer({
           </div>
         )}
 
-        {/* Journey Summary Box */}
-        <div className="bg-blue-50/70 dark:bg-blue-950/40 p-3 rounded-2xl border border-blue-100 dark:border-blue-900/50 flex items-center justify-between">
+        {/* Journey Summary Box with Live Traffic Indicator */}
+        <div className="bg-gradient-to-r from-blue-50/90 to-indigo-50/90 dark:from-blue-950/40 dark:to-indigo-950/30 p-3 rounded-2xl border border-blue-100/90 dark:border-blue-900/50 flex items-center justify-between">
           <div>
-            <div className="text-xl font-black text-blue-600 dark:text-blue-400">
+            <div className="text-2xl font-black text-blue-600 dark:text-blue-400 leading-none">
               {isLoading ? (
-                <span className="flex items-center gap-1.5 text-sm text-slate-500">
+                <span className="flex items-center gap-1.5 text-xs text-slate-500">
                   <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
                   Calculating route...
                 </span>
@@ -404,63 +407,68 @@ export function DirectionsDrawer({
               )}
             </div>
             {!isLoading && (
-              <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                {route.distanceText} via fastest road
+              <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 mt-1 flex items-center gap-1.5">
+                <span>{route.distanceText}</span>
+                <span>•</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                  Fastest Road
+                </span>
               </div>
             )}
           </div>
 
           <div className="text-right">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-200/50">
-              Optimal Route
+            <span className="inline-flex items-center gap-1 text-[10.5px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-300/40">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live Traffic
             </span>
           </div>
         </div>
 
-        {/* Start Live Navigation Simulation Button */}
+        {/* Start Live Navigation Preview Button */}
         {onStartNavigation && (
           <button
             onClick={onStartNavigation}
-            className="w-full mt-3 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
+            className="w-full mt-2.5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
           >
             <Navigation className="w-4 h-4 fill-white" />
-            <span>Start Live Navigation Preview</span>
+            <span>Start Live Navigation</span>
           </button>
         )}
       </div>
 
       {/* Step by Step Navigation Directions List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
-            Turn-by-Turn Steps ({route.steps.length})
+      <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-2.5 max-h-[35vh] sm:max-h-[42vh]">
+        <div className="flex items-center justify-between sticky top-0 bg-white dark:bg-[#1c1d21] py-1 z-10">
+          <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <span>Turn-by-Turn Steps ({route.steps.length})</span>
           </span>
           <button
             onClick={() => setShowSteps(!showSteps)}
-            className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-0.5"
+            className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-0.5 p-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30"
           >
-            <span>{showSteps ? "Hide" : "Show"}</span>
-            {showSteps ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            <span>{showSteps ? "Hide Steps" : "View Steps"}</span>
+            {showSteps ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
           </button>
         </div>
 
         {showSteps && (
-          <div className="space-y-2.5">
+          <div className="space-y-2 pt-1 animate-in fade-in duration-200">
             {route.steps.map((step, idx) => (
               <div
                 key={idx}
-                className="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 flex items-start gap-3 hover:bg-slate-100/80 transition-colors"
+                className="p-2.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 flex items-start gap-2.5 hover:bg-slate-100/80 transition-colors"
               >
-                <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
-                  <CornerUpRight className="w-3.5 h-3.5" />
+                <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[11px]">
+                  {idx + 1}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold leading-relaxed text-slate-800 dark:text-slate-200">
                     {step.instruction}
                   </p>
                   <div className="flex items-center gap-2 mt-1 text-[10.5px] text-slate-400 font-medium">
-                    {step.distanceMeters > 0 && <span>{step.distanceMeters} m</span>}
-                    {step.durationSeconds > 0 && <span>• {Math.round(step.durationSeconds / 60)} min</span>}
+                    {step.distanceMeters > 0 && <span>{step.distanceMeters > 1000 ? `${(step.distanceMeters/1000).toFixed(1)} km` : `${step.distanceMeters} m`}</span>}
+                    {step.durationSeconds > 0 && <span>• {Math.max(1, Math.round(step.durationSeconds / 60))} min</span>}
                   </div>
                 </div>
               </div>

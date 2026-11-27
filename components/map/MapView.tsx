@@ -21,6 +21,7 @@ import { MapEventsHandler } from "./MapEventsHandler";
 import { DelhiDistrictsGeoJson } from "./DelhiDistrictsGeoJson";
 import { MarkerClusterLayer } from "./MarkerClusterLayer";
 import { DelhiMetroLayer } from "./DelhiMetroLayer";
+import { TrafficLayer } from "./TrafficLayer";
 import { MapRouteLayer } from "./MapRouteLayer";
 import { GeomanDrawLayer } from "./GeomanDrawLayer";
 import { ReverseGeocodingHandler } from "./ReverseGeocodingHandler";
@@ -58,6 +59,7 @@ interface MapViewProps {
   selectedClusterMarkerId?: string | null;
   onSelectClusterMarker?: (marker: MarkerPoi) => void;
   showMetroLines?: boolean;
+  showTraffic?: boolean;
   onSelectMetroStation?: (station: MetroStation) => void;
   onOpenShare?: (data: { title: string; url: string; description?: string }) => void;
   // Level 3 Additions:
@@ -89,6 +91,7 @@ export default function MapView({
   selectedClusterMarkerId = null,
   onSelectClusterMarker,
   showMetroLines = true,
+  showTraffic = true,
   onSelectMetroStation,
   onOpenShare,
   activeRoute = null,
@@ -155,6 +158,9 @@ export default function MapView({
           visible={showMetroLines}
           onSelectStation={(station) => onSelectMetroStation?.(station)}
         />
+
+        {/* Live Delhi Traffic Overlay */}
+        <TrafficLayer visible={showTraffic} />
 
         {/* Level 3: Geoman Drawing & Measurement Layer (Draw polygon, polyline, circle, marker; measure area/distance; persist to LocalStorage) */}
         <GeomanDrawLayer enabled={showDrawTools} activeColor={activeDrawColor} />

@@ -44,6 +44,8 @@ interface GoogleMapsSearchCardProps {
   totalMarkersCount?: number;
   onOpenShare?: (data: { title: string; url: string; description?: string }) => void;
   onRequestDirections?: (coords: [number, number], name: string) => void;
+  showTraffic?: boolean;
+  onToggleTraffic?: () => void;
   showDrawTools?: boolean;
   onToggleDrawTools?: () => void;
   onToggleNearbyPlaces?: () => void;
@@ -91,6 +93,8 @@ export function GoogleMapsSearchCard({
   onTogglePlacesExplorer,
   onOpenShare,
   onRequestDirections,
+  showTraffic = true,
+  onToggleTraffic,
   showDrawTools,
   onToggleDrawTools,
   onToggleNearbyPlaces,
@@ -450,6 +454,21 @@ export function GoogleMapsSearchCard({
               className="relative pointer-events-auto shrink-0"
             />
           </div>
+        )}
+
+        {/* Live Delhi Traffic Chip */}
+        {onToggleTraffic && (
+          <button
+            onClick={onToggleTraffic}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
+              showTraffic
+                ? "bg-rose-600 text-white ring-2 ring-rose-400/40"
+                : "bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <span>🚦</span>
+            <span>Traffic</span>
+          </button>
         )}
 
         {/* 1. Level 3: Geoman Drawing & Measurement Tools Chip (Prominent) */}

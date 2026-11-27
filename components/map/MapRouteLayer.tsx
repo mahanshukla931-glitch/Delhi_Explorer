@@ -30,34 +30,36 @@ export function MapRouteLayer({ route }: MapRouteLayerProps) {
 
   if (!route || route.coordinates.length === 0) return null;
 
-  // Custom Origin Icon (Start A)
+  // Custom Origin Icon (Start A - Google Maps Style Green)
   const startIcon = L.divIcon({
     html: `
-      <div style="transform: translate(-50%, -100%); display: flex; flex-direction: column; items-center;">
-        <div style="background: #16a34a; color: white; width: 28px; height: 28px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; border: 2.5px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.35);">
+      <div style="transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center;">
+        <div style="background: #10b981; color: white; width: 30px; height: 30px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; border: 2.5px solid white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.45);">
           A
         </div>
+        <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid #10b981; margin-top: -1px;"></div>
       </div>
     `,
     className: "route-pin-start",
-    iconSize: [28, 28],
-    iconAnchor: [14, 28],
-    popupAnchor: [0, -28],
+    iconSize: [30, 36],
+    iconAnchor: [15, 36],
+    popupAnchor: [0, -36],
   });
 
-  // Custom Destination Icon (Finish B)
+  // Custom Destination Icon (Finish B - Google Maps Style Red Pin)
   const endIcon = L.divIcon({
     html: `
-      <div style="transform: translate(-50%, -100%); display: flex; flex-direction: column; items-center;">
-        <div style="background: #ea4335; color: white; width: 28px; height: 28px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; border: 2.5px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.35);">
+      <div style="transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center;">
+        <div style="background: #ea4335; color: white; width: 30px; height: 30px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; border: 2.5px solid white; box-shadow: 0 4px 12px rgba(234, 67, 53, 0.45);">
           B
         </div>
+        <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid #ea4335; margin-top: -1px;"></div>
       </div>
     `,
     className: "route-pin-end",
-    iconSize: [28, 28],
-    iconAnchor: [14, 28],
-    popupAnchor: [0, -28],
+    iconSize: [30, 36],
+    iconAnchor: [15, 36],
+    popupAnchor: [0, -36],
   });
 
   return (

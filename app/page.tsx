@@ -58,8 +58,9 @@ export default function Home() {
   >("density");
   const [selectedDistrict, setSelectedDistrict] = useState<DistrictProperties | null>(null);
 
-  // Delhi Metro State
+  // Delhi Metro & Traffic State
   const [showMetroLines, setShowMetroLines] = useState(true);
+  const [showTraffic, setShowTraffic] = useState(true);
 
   // Level 3: Navigation & Routing State
   const [activeRoute, setActiveRoute] = useState<RouteData | null>(null);
@@ -338,21 +339,21 @@ export default function Home() {
 
         try {
           const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords[0]}&lon=${coords[1]}`
+            `/api/reverse?lat=${coords[0]}&lng=${coords[1]}`
           );
           if (res.ok) {
             const data = await res.json();
-            const detectedCity =
-              data.address?.city ||
-              data.address?.town ||
-              data.address?.suburb ||
-              data.address?.state_district ||
-              data.address?.state ||
-              "My Location";
+            const detectedName =
+              data.shortAddress ||
+              data.addressDetails?.city ||
+              data.addressDetails?.town ||
+              data.addressDetails?.suburb ||
+              data.addressDetails?.state ||
+              "My Current Location";
 
             setWeatherLocation({
               coords,
-              name: detectedCity,
+              name: detectedName,
             });
             return;
           }
@@ -452,15 +453,47 @@ export default function Home() {
   ) => {
     try {
       setIsRoutingLoading(true);
-      const startCoords =
-        customStartCoords ||
-        userLocation.coords ||
-        DELHI_PRIMARY_LANDMARKS[0].coordinates;
-      const originName =
-        customOriginName ||
-        (userLocation.coords
-          ? weatherLocation.name || "My Location"
-          : "India Gate (Central Delhi)");
+
+      // Determine starting point intelligently:
+      // If user hasn't specified a start point:
+      // - If user is in or near Delhi NCR (within 100km), use their live GPS!
+      // - If user's GPS is far away (e.g. Bhopal/interstate > 100km) or GPS not allowed,
+      //   default starting point to central Delhi (India Gate / CP) so intra-city Delhi exploration isn't distorted
+      let startCoords: [number, number];
+      let originName: string;
+
+      if (customStartCoords && customOriginName) {
+        startCoords = customStartCoords;
+        originName = customOriginName;
+      } else if (userLocation.coords) {
+        // Measure distance to Delhi center [28.6139, 77.209]
+        const dLat = (userLocation.coords[0] - 28.6139) * 111;
+        const dLng = (userLocation.coords[1] - 77.209) * 96;
+        const distFromDelhiKm = Math.sqrt(dLat * dLat + dLng * dLng);
+
+        if (distFromDelhiKm <= 90) {
+          startCoords = userLocation.coords;
+          originName = weatherLocation.name || "My Location (Delhi NCR)";
+        } else {
+          // If destination itself is Delhi Gate/etc, let origin be India Gate or Rajiv Chowk so user gets normal Delhi travel time
+          // unless user specifically searched for inter-city route
+          if (destName.toLowerCase().includes("india gate")) {
+            startCoords = [28.6328, 77.2197]; // Rajiv Chowk, Connaught Place
+            originName = "Connaught Place (CP)";
+          } else {
+            startCoords = DELHI_PRIMARY_LANDMARKS[0].coordinates;
+            originName = "India Gate (Central Delhi)";
+          }
+        }
+      } else {
+        if (destName.toLowerCase().includes("india gate")) {
+          startCoords = [28.6328, 77.2197]; // Rajiv Chowk, Connaught Place
+          originName = "Connaught Place (CP)";
+        } else {
+          startCoords = DELHI_PRIMARY_LANDMARKS[0].coordinates;
+          originName = "India Gate (Central Delhi)";
+        }
+      }
 
       const res = await fetch(
         `/api/route?startLat=${startCoords[0]}&startLng=${startCoords[1]}&endLat=${destCoords[0]}&endLng=${destCoords[1]}&mode=${mode}`
@@ -542,6 +575,8 @@ export default function Home() {
         totalMarkersCount={allMarkers.length || 1200}
         onOpenShare={handleOpenShare}
         onRequestDirections={(coords, name) => handleCalculateRoute(coords, name)}
+        showTraffic={showTraffic}
+        onToggleTraffic={() => setShowTraffic((prev) => !prev)}
         showDrawTools={showDrawTools}
         onToggleDrawTools={() => setShowDrawTools((prev) => !prev)}
         onToggleNearbyPlaces={() => setIsNearbyDrawerOpen((prev) => !prev)}
@@ -607,6 +642,8 @@ export default function Home() {
         onToggleMetroLines={() => setShowMetroLines((prev) => !prev)}
         onOpenPlacesExplorer={() => setIsPlacesExplorerOpen(true)}
         totalMarkersCount={allMarkers.length || 1200}
+        showTraffic={showTraffic}
+        onToggleTraffic={() => setShowTraffic((prev) => !prev)}
         showDrawTools={showDrawTools}
         onToggleDrawTools={() => setShowDrawTools((prev) => !prev)}
         onOpenNearby={() => setIsNearbyDrawerOpen(true)}
@@ -686,6 +723,7 @@ export default function Home() {
               setActiveRoute(null);
               setIsDirectionsDrawerOpen(false);
             }}
+            showTraffic={showTraffic}
             showDrawTools={showDrawTools}
             activeDrawColor={activeDrawColor}
             nearbyPlaces={nearbyPlaces}

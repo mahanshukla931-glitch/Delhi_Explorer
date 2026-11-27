@@ -34,6 +34,8 @@ interface GoogleMapsDrawerProps {
   onToggleMetroLines?: () => void;
   onOpenPlacesExplorer?: () => void;
   totalMarkersCount?: number;
+  showTraffic?: boolean;
+  onToggleTraffic?: () => void;
   showDrawTools?: boolean;
   onToggleDrawTools?: () => void;
   onOpenNearby?: () => void;
@@ -55,6 +57,8 @@ export function GoogleMapsDrawer({
   onToggleMetroLines,
   onOpenPlacesExplorer,
   totalMarkersCount = 1200,
+  showTraffic = true,
+  onToggleTraffic,
   showDrawTools = false,
   onToggleDrawTools,
   onOpenNearby,
@@ -326,6 +330,35 @@ export function GoogleMapsDrawer({
                     showMarkerClusters ? "bg-rose-600 justify-end" : "bg-slate-300 dark:bg-slate-600 justify-start"
                   }`}
                   aria-label="Toggle Marker Clustering"
+                >
+                  <div className="w-5 h-5 rounded-full bg-white shadow-xs" />
+                </button>
+              </div>
+            )}
+
+            {/* Live Traffic Overlay Switch */}
+            {onToggleTraffic && (
+              <div className="p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-2xs text-sm">
+                    🚦
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block leading-tight">
+                      Live Traffic Conditions
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      Real-time congestion & delay indicators
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={onToggleTraffic}
+                  className={`w-11 h-6 flex items-center rounded-full p-0.5 cursor-pointer transition-colors ${
+                    showTraffic ? "bg-rose-600 justify-end" : "bg-slate-300 dark:bg-slate-600 justify-start"
+                  }`}
+                  aria-label="Toggle Traffic Conditions"
                 >
                   <div className="w-5 h-5 rounded-full bg-white shadow-xs" />
                 </button>
