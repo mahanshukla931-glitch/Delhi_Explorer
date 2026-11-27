@@ -346,6 +346,10 @@ export default function Home() {
         }
         setUserLocation((prev) => ({ ...prev, loading: false, error: msg }));
         setErrorNotice(msg);
+        // Auto-dismiss the toast notice after 4 seconds so it doesn't block the screen
+        setTimeout(() => {
+          setErrorNotice((current) => (current === msg ? null : current));
+        }, 4000);
       },
       {
         enableHighAccuracy: true,
@@ -509,13 +513,15 @@ export default function Home() {
         </div>
       )}
 
-      {/* Global Error Banner */}
+      {/* Floating Modern Toast Notification */}
       {errorNotice && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-40 bg-rose-600 text-white text-xs font-medium px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-in fade-in">
-          <span>{errorNotice}</span>
+        <div className="absolute top-20 sm:top-6 left-1/2 -translate-x-1/2 z-50 max-w-md w-[90%] sm:w-auto bg-slate-900/95 dark:bg-[#1a1b1e]/95 backdrop-blur-md text-white text-xs font-semibold px-4 py-2.5 rounded-2xl shadow-2xl border border-white/10 flex items-center gap-2.5 animate-in fade-in slide-in-from-top-3 select-none">
+          <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0 animate-pulse" />
+          <span className="flex-1 text-[11.5px] leading-snug">{errorNotice}</span>
           <button
             onClick={() => setErrorNotice(null)}
-            className="p-0.5 rounded-full hover:bg-rose-700"
+            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+            aria-label="Dismiss"
           >
             ✕
           </button>
