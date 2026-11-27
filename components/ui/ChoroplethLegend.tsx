@@ -73,7 +73,7 @@ export function ChoroplethLegend({
       : areaGrades;
 
   return (
-    <div className="absolute top-24 sm:top-28 right-3 sm:right-4 z-20 flex flex-col gap-2 max-w-[280px] pointer-events-auto select-none">
+    <div className="absolute top-[148px] sm:top-28 right-3 sm:right-4 z-20 flex flex-col gap-2 max-w-[260px] sm:max-w-[280px] pointer-events-auto select-none">
       {/* Metric Switcher & Legend Pill Box */}
       <div className="bg-white/95 dark:bg-[#1f2023]/95 backdrop-blur-md rounded-2xl p-3 shadow-xl border border-slate-200/90 dark:border-slate-700/80 transition-all">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2">

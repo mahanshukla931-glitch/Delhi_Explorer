@@ -34,14 +34,15 @@ export function MobileBottomBar({
 }: MobileBottomBarProps) {
   return (
     <>
-      {/* Floating Compact Clear Map Toggle Pill on Mobile (Always accessible even in clear map mode) */}
-      <div className="sm:hidden fixed top-3 right-3 z-40 pointer-events-auto">
+      {/* Floating Compact Clear Map Toggle Pill on Mobile:
+          Positioned below the search bar to avoid overlapping search/input icons */}
+      <div className="sm:hidden fixed top-[110px] right-3 z-30 pointer-events-auto">
         <button
           onClick={onToggleClearMap}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-lg backdrop-blur-md transition-all active:scale-95 border ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold shadow-lg backdrop-blur-md transition-all active:scale-95 border ${
             isClearMap
-              ? "bg-blue-600 text-white border-blue-500 shadow-blue-500/25 ring-2 ring-blue-400/40"
-              : "bg-white/90 dark:bg-[#1a1b1e]/90 text-slate-800 dark:text-slate-200 border-slate-200/80 dark:border-slate-700/80"
+              ? "bg-blue-600 text-white border-blue-500 shadow-blue-500/30 ring-2 ring-blue-400/40"
+              : "bg-white/95 dark:bg-[#1a1b1e]/95 text-slate-800 dark:text-slate-200 border-slate-200/90 dark:border-slate-700/80 hover:bg-slate-50"
           }`}
           aria-label="Toggle Clear Map"
         >
