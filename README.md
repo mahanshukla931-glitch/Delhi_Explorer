@@ -1,36 +1,124 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Delhi Explorer – Interactive Geospatial Map Application
 
-## Getting Started
+A production-grade geospatial interactive map application focused on the National Capital Territory of Delhi and destinations across India. Built with **Next.js 14 (App Router)**, **TypeScript**, **Leaflet**, **React-Leaflet**, and **Tailwind CSS**.
 
-First, run the development server:
+100% Free & Keyless APIs — No Google Maps API, no Mapbox, no credit card required.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 🚀 Status & Roadmap
+
+- [x] **Level 1: Map Fundamentals & UI Polish** (100% Completed & Verified)
+  - Interactive Leaflet map engine (OSM Standard, Esri Satellite, Esri World Topo Terrain)
+  - Seamless Night Mode Theme with synchronized high-contrast dark map tiles
+  - 10+ primary Delhi landmarks with custom SVG droplet pins and rich detail cards
+  - HTML5 browser geolocation (Locate Me) with accuracy buffer radius
+  - Live cursor coordinates and zoom level tracking
+  - Google Maps style search card with 400ms debounced Nominatim all-India geocoding
+  - Speech Recognition voice search input (Web Speech API)
+  - Real-time Open-Meteo live weather & air quality (AQI) widget with responsive mobile flyout
+  - Dedicated AI Travel Copilot with multi-stage reasoning and English voice playback
+  - Progressive Web App (PWA) with service worker offline tile caching
+- [ ] **Level 2: Geographic Data & Marker Management**
+- [ ] **Level 3: Map Interactions & Free APIs**
+- [ ] **Level 4: Advanced Features & Production Readiness**
+
+---
+
+## 🛠 Tech Stack
+
+- **Framework**: Next.js 14.2 (App Router)
+- **Language**: TypeScript 5
+- **Styling**: Tailwind CSS 3
+- **Map Library**: Leaflet 1.9 & React-Leaflet 4.2
+- **Icons**: Lucide React
+- **PWA**: Service Worker Cache API & Web Manifest
+
+---
+
+## 📡 Free Services Used & Usage Limits
+
+All external data and services used in this project are 100% free and require zero paid API keys:
+
+| Service | Purpose | Limits / Policy |
+| :--- | :--- | :--- |
+| **OpenStreetMap Standard** | Street base map tiles | Free, public tile usage with OSM attribution |
+| **Esri World Imagery** | Satellite aerial tile layer | Free public ArcGIS tile service, no API key required |
+| **Esri World Topo (Terrain)** | Topographic contour relief layer | Free public ArcGIS tile service |
+| **Esri Dark Canvas** | Night mode dark tile layer | Free public ArcGIS tile service with road labels overlay |
+| **Nominatim OpenStreetMap** | Real-time geocoding & search | Max 1 request/sec, requires descriptive `User-Agent`, debounced at 400ms |
+| **Open-Meteo Weather API** | Live temperature, humidity, wind & AQI | 10,000 requests/day free, zero key required |
+| **Wikipedia REST API** | Landmark encyclopedia data & photos | Free, keyless public Wikimedia REST API |
+| **Web Speech API** | Voice search mic input | Native browser API, zero cost, runs locally in browser |
+| **HTML5 Geolocation API** | Locate me GPS coordinates | Native browser API, requires HTTPS / localhost |
+
+---
+
+## 🔒 How SSR Was Solved
+
+Leaflet relies on browser-only globals (`window`, `document`, `navigator`) during initialization. Running Leaflet during Next.js server-side pre-rendering triggers `ReferenceError: window is not defined`.
+
+This was resolved cleanly using Next.js client-only dynamic imports with SSR disabled:
+
+```tsx
+const DynamicMapView = dynamic(() => import("@/components/map/MapView"), {
+  ssr: false,
+  loading: () => <MapLoadingSkeleton />,
+});
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+All Leaflet imports, tile event listeners, and map container lifecycles are strictly restricted to client components with `"use client"`, ensuring 100% clean SSR builds and zero hydration mismatches.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 💻 Getting Started
 
-## Learn More
+### 1. Prerequisites
+- Node.js 18.x or 20.x
+- npm 9+ or 10+
 
-To learn more about Next.js, take a look at the following resources:
+### 2. Setup & Installation
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd Delhi_Explorer
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Install dependencies
+npm install
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Copy environment variables
+cp .env.example .env.local
 
-## Deploy on Vercel
+# Run development server
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Visit [http://localhost:3000](http://localhost:3000) (or [http://localhost:3001](http://localhost:3001)) in your browser.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 3. Production Build & Start
+```bash
+npm run build
+npm start
+```
+
+---
+
+## 🌐 Deploy to Vercel
+
+This repository is optimized for one-click deployment on [Vercel](https://vercel.com):
+
+1. Push your repository to GitHub.
+2. Go to [vercel.com/new](https://vercel.com/new) and import the repository.
+3. Keep the default Next.js build settings:
+   - **Framework Preset**: Next.js
+   - **Build Command**: `next build`
+   - **Output Directory**: `.next`
+4. Click **Deploy**. Vercel will build and deploy the production site with an instant live HTTPS URL.
+
+---
+
+## ⚠️ Known Limitations
+
+1. **Voice Input Browser Compatibility**: Web Speech API (`webkitSpeechRecognition`) is natively supported on Chromium-based browsers (Chrome, Edge, Brave, Opera) and Safari. On unsupported browsers, manual text typing is used.
+2. **Nominatim Rate Limits**: Strict 1 request/sec policy from OpenStreetMap; user typing is debounced at 400ms and cached to prevent 429 rate-limiting.
+3. **Geolocation Permissions**: Browser geolocation requires an active HTTPS origin (or `localhost`) and user permission prompt approval.
