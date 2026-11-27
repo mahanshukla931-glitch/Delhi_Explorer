@@ -93,12 +93,25 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   width: 100%;
   height: 100%;
   z-index: 10;
-  background-color: #1a1a1a !important;
+  background-color: #f1f5f9 !important;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 
-/* High-contrast Night Mode Tile Enhancements */
+html.dark .leaflet-container {
+  background-color: #121212 !important;
+}
+
+/* Crystal Sharp Tiles without Blur or Dull Filters */
+.leaflet-tile {
+  filter: none !important;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Night Mode Tile - Pure Contrast */
 .night-mode-tile {
-  filter: contrast(125%) brightness(108%) saturate(110%);
+  filter: brightness(98%) contrast(105%) !important;
 }
 
 .dark-terrain-tile {
@@ -106,7 +119,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 }
 
 .dark-satellite-tile {
-  filter: contrast(110%) brightness(90%);
+  filter: contrast(110%) brightness(95%);
 }
 
 /* Custom Marker Styling */
