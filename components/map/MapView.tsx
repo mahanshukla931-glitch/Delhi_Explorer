@@ -64,6 +64,7 @@ interface MapViewProps {
   activeRoute?: RouteData | null;
   onClearRoute?: () => void;
   showDrawTools?: boolean;
+  activeDrawColor?: string;
   nearbyPlaces?: NearbyPlaceItem[];
   onSelectNearbyPlace?: (place: NearbyPlaceItem) => void;
   onRequestDirections?: (coords: [number, number], name: string) => void;
@@ -93,6 +94,7 @@ export default function MapView({
   activeRoute = null,
   onClearRoute,
   showDrawTools = false,
+  activeDrawColor = "#3b82f6",
   nearbyPlaces = [],
   onSelectNearbyPlace,
   onRequestDirections,
@@ -155,7 +157,7 @@ export default function MapView({
         />
 
         {/* Level 3: Geoman Drawing & Measurement Layer (Draw polygon, polyline, circle, marker; measure area/distance; persist to LocalStorage) */}
-        <GeomanDrawLayer enabled={showDrawTools} />
+        <GeomanDrawLayer enabled={showDrawTools} activeColor={activeDrawColor} />
 
         {/* Level 3: Reverse Geocoding Map Click Handler (Click map -> address popup with Navigate & Nearby) */}
         <ReverseGeocodingHandler

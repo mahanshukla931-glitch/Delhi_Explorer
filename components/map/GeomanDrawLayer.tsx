@@ -41,7 +41,13 @@ function computeLineDistance(latLngs: L.LatLng[]): number {
   return total;
 }
 
-export function GeomanDrawLayer({ enabled = true }: { enabled?: boolean }) {
+export function GeomanDrawLayer({
+  enabled = true,
+  activeColor = "#3b82f6",
+}: {
+  enabled?: boolean;
+  activeColor?: string;
+}) {
   const map = useMap();
   const drawnLayersRef = useRef<Map<string, L.Layer>>(new Map());
 
@@ -88,56 +94,64 @@ export function GeomanDrawLayer({ enabled = true }: { enabled?: boolean }) {
     });
   };
 
-  // 1. Initial Load of Saved Shapes from LocalStorage (survives page refresh)
+  // 1. Initial Load of Saved Shapes from LocalStorage (survives page refresh & syncs on events)
   useEffect(() => {
     if (!map) return;
 
-    // Clear any previous references
-    drawnLayersRef.current.forEach((layer) => {
-      try {
-        map.removeLayer(layer);
-      } catch {}
-    });
-    drawnLayersRef.current.clear();
+    const renderStoredShapes = () => {
+      // Clear any previous references
+      drawnLayersRef.current.forEach((layer) => {
+        try {
+          map.removeLayer(layer);
+        } catch {}
+      });
+      drawnLayersRef.current.clear();
 
-    const existingShapes = loadSavedShapes();
-    existingShapes.forEach((s) => {
-      try {
-        let l: any;
-        if (s.type === "marker") {
-          l = L.marker(s.coordinates as [number, number]);
-        } else if (s.type === "circle") {
-          const c = s.coordinates as { center: [number, number]; radius: number };
-          l = L.circle(c.center, {
-            radius: c.radius,
-            color: "#3b82f6",
-            fillColor: "#60a5fa",
-            fillOpacity: 0.25,
-          });
-        } else if (s.type === "polyline" || (s.type as string) === "line") {
-          l = L.polyline(s.coordinates as [number, number][], {
-            color: "#8b5cf6",
-            weight: 4,
-          });
-        } else if (s.type === "polygon" || s.type === "rectangle") {
-          l = L.polygon(s.coordinates as [number, number][], {
-            color: "#10b981",
-            fillColor: "#34d399",
-            fillOpacity: 0.25,
-            weight: 3,
-          });
-        }
+      const existingShapes = loadSavedShapes();
+      existingShapes.forEach((s) => {
+        try {
+          let l: any;
+          const shapeColor = s.color || "#3b82f6";
+          if (s.type === "marker") {
+            l = L.marker(s.coordinates as [number, number]);
+          } else if (s.type === "circle") {
+            const c = s.coordinates as { center: [number, number]; radius: number };
+            l = L.circle(c.center, {
+              radius: c.radius,
+              color: shapeColor,
+              fillColor: shapeColor,
+              fillOpacity: 0.25,
+            });
+          } else if (s.type === "polyline" || (s.type as string) === "line") {
+            l = L.polyline(s.coordinates as [number, number][], {
+              color: shapeColor,
+              weight: 4,
+            });
+          } else if (s.type === "polygon" || s.type === "rectangle") {
+            l = L.polygon(s.coordinates as [number, number][], {
+              color: shapeColor,
+              fillColor: shapeColor,
+              fillOpacity: 0.25,
+              weight: 3,
+            });
+          }
 
-        if (l) {
-          l.addTo(map);
-          (l as any)._shapeId = s.id;
-          drawnLayersRef.current.set(s.id, l);
-          attachShapePopup(l, s);
+          if (l) {
+            l.addTo(map);
+            (l as any)._shapeId = s.id;
+            drawnLayersRef.current.set(s.id, l);
+            attachShapePopup(l, s);
+          }
+        } catch (err) {
+          console.error("Failed to render stored shape:", err);
         }
-      } catch (err) {
-        console.error("Failed to render stored shape:", err);
-      }
-    });
+      });
+    };
+
+    renderStoredShapes();
+
+    window.addEventListener("delhi_shapes_changed", renderStoredShapes);
+    return () => window.removeEventListener("delhi_shapes_changed", renderStoredShapes);
   }, [map]);
 
   // 2. Toolbar controls and create/edit/delete event listeners
@@ -147,6 +161,12 @@ export function GeomanDrawLayer({ enabled = true }: { enabled?: boolean }) {
     const pm = (map as any).pm;
 
     if (enabled) {
+      pm.setPathOptions({
+        color: activeColor,
+        fillColor: activeColor,
+        fillOpacity: 0.25,
+      });
+
       pm.addControls({
         position: "topleft",
         drawMarker: true,
@@ -214,6 +234,7 @@ export function GeomanDrawLayer({ enabled = true }: { enabled?: boolean }) {
         type: shapeType,
         coordinates: coords,
         measurements,
+        color: activeColor,
         createdAt: Date.now(),
       };
 

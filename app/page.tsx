@@ -14,6 +14,8 @@ import { ShareModal } from "@/components/ui/ShareModal";
 import { MobileBottomBar } from "@/components/ui/MobileBottomBar";
 import { DirectionsDrawer } from "@/components/ui/DirectionsDrawer";
 import { NearbyPlacesDrawer } from "@/components/ui/NearbyPlacesDrawer";
+import { DrawToolsFloatingBar } from "@/components/ui/DrawToolsFloatingBar";
+import { NavigationSimulationBanner } from "@/components/ui/NavigationSimulationBanner";
 import { NearbyPlaceItem } from "@/components/map/NearbyMarkersLayer";
 import { MetroStation } from "@/lib/metroData";
 import { RouteData, TravelMode } from "@/types/routing";
@@ -66,6 +68,8 @@ export default function Home() {
 
   // Level 3: Drawing & Measurement Tools State
   const [showDrawTools, setShowDrawTools] = useState(false);
+  const [activeDrawColor, setActiveDrawColor] = useState("#2563eb");
+  const [isNavSimActive, setIsNavSimActive] = useState(false);
 
   // Level 3: Overpass Nearby Search State
   const [isNearbyDrawerOpen, setIsNearbyDrawerOpen] = useState(false);
@@ -674,6 +678,7 @@ export default function Home() {
               setIsDirectionsDrawerOpen(false);
             }}
             showDrawTools={showDrawTools}
+            activeDrawColor={activeDrawColor}
             nearbyPlaces={nearbyPlaces}
             onSelectNearbyPlace={(p) => setFlyToCoords(p.coordinates)}
             onRequestDirections={(coords, name) => handleCalculateRoute(coords, name)}
@@ -686,6 +691,27 @@ export default function Home() {
           />
         </MapErrorBoundary>
       </main>
+
+      {/* Level 3 Pro: Floating GeoJSON Export/Import & Color Palette Management Bar */}
+      <DrawToolsFloatingBar
+        isOpen={showDrawTools}
+        onClose={() => setShowDrawTools(false)}
+        activeColor={activeDrawColor}
+        onChangeColor={setActiveDrawColor}
+        onShapesImported={(count) =>
+          setErrorNotice(`Successfully imported ${count} shape(s) from GeoJSON!`)
+        }
+      />
+
+      {/* Level 3 Pro: Google Maps Style Turn-by-Turn GPS Navigation Preview Banner */}
+      {activeRoute && (
+        <NavigationSimulationBanner
+          route={activeRoute}
+          isActive={isNavSimActive}
+          onExit={() => setIsNavSimActive(false)}
+          onPositionUpdate={(coords) => setFlyToCoords(coords)}
+        />
+      )}
 
       {/* Level 3: Overpass API Find Nearby Drawer */}
       <NearbyPlacesDrawer
@@ -723,6 +749,10 @@ export default function Home() {
           }
         }}
         isLoading={isRoutingLoading}
+        onStartNavigation={() => {
+          setIsDirectionsDrawerOpen(false);
+          setIsNavSimActive(true);
+        }}
       />
 
       {/* Modern Mobile Bottom Bar */}

@@ -19,6 +19,7 @@ interface DirectionsDrawerProps {
   onClose: () => void;
   onChangeMode: (mode: TravelMode) => void;
   isLoading?: boolean;
+  onStartNavigation?: () => void;
 }
 
 export function DirectionsDrawer({
@@ -27,6 +28,7 @@ export function DirectionsDrawer({
   onClose,
   onChangeMode,
   isLoading = false,
+  onStartNavigation,
 }: DirectionsDrawerProps) {
   const [showSteps, setShowSteps] = useState(true);
 
@@ -135,6 +137,17 @@ export function DirectionsDrawer({
             </span>
           </div>
         </div>
+
+        {/* Start Live Navigation Simulation Button */}
+        {onStartNavigation && (
+          <button
+            onClick={onStartNavigation}
+            className="w-full mt-3 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
+          >
+            <Navigation className="w-4 h-4 fill-white" />
+            <span>Start Live Navigation Preview</span>
+          </button>
+        )}
       </div>
 
       {/* Step by Step Navigation Directions List */}
