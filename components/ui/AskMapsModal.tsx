@@ -262,6 +262,7 @@ export function AskMapsModal({
   // Dynamic Location-Aware Suggestions Across India
   const locationSuggestions = useMemo(() => {
     const loc = (currentLocationName || "").toLowerCase();
+    const cityName = currentLocationName && currentLocationName !== "Delhi" ? currentLocationName : "Delhi";
 
     if (selectedLandmark) {
       return [
@@ -274,14 +275,14 @@ export function AskMapsModal({
       ];
     }
 
-    if (loc.includes("bhopal")) {
+    if (cityName === "Delhi" || !cityName || loc.includes("bhopal") || loc.includes("delhi")) {
       return [
-        { text: "Best street food in Bhopal (Poha Jalebi & Chatori Gali)", category: "food", badge: "Trending", icon: "🍛" },
-        { text: "Top attractions around Upper Lake (Bada Talab) & Van Vihar", category: "places", badge: "Popular", icon: "🏞️" },
-        { text: "Historic guide to Taj-ul-Masajid & Shaukat Mahal", category: "places", badge: "Heritage", icon: "🕌" },
-        { text: "How to travel from Bhopal to Delhi (Vande Bharat route)?", category: "transit", badge: "Express", icon: "🚅" },
-        { text: "Evening sunset cafes on VIP Road & Boat Club", category: "food", badge: "Scenic", icon: "☕" },
-        { text: "Best shopping markets in Bhopal for Zari & handicrafts", category: "tips", badge: "Shopping", icon: "🛍️" },
+        { text: "Where is OpenSense Labs in Delhi NCR?", category: "places", badge: "Tech Hub", icon: "🏢" },
+        { text: "Best authentic street food in Chandni Chowk (Paranthe Wali Gali & Chaat)", category: "food", badge: "Must Try", icon: "🍲" },
+        { text: "How to reach Qutub Minar by Yellow Line Metro?", category: "transit", badge: "Transit", icon: "🚇" },
+        { text: "Top evening cafes & heritage walk in Connaught Place", category: "food", badge: "Dining", icon: "☕" },
+        { text: "Plan a 1-day itinerary of historic Delhi monuments (Red Fort, Humayun Tomb)", category: "places", badge: "Tour", icon: "🏛️" },
+        { text: "Best budget shopping markets in Delhi (Sarojini & Janpath)", category: "tips", badge: "Bargain", icon: "🛍️" },
       ];
     }
 
@@ -316,25 +317,13 @@ export function AskMapsModal({
       ];
     }
 
-    const cityName = currentLocationName && currentLocationName !== "Delhi" ? currentLocationName : "Delhi";
-    if (cityName === "Delhi") {
-      return [
-        { text: "Where is OpenSense Labs in Delhi NCR?", category: "places", badge: "Tech Hub", icon: "🏢" },
-        { text: "Best authentic street food in Chandni Chowk", category: "food", badge: "Must Try", icon: "🍲" },
-        { text: "How to reach Qutub Minar by metro?", category: "transit", badge: "Transit", icon: "🚇" },
-        { text: "Top evening cafes & heritage walk in Connaught Place", category: "food", badge: "Dining", icon: "☕" },
-        { text: "Plan a 1-day itinerary of historic monuments", category: "places", badge: "Tour", icon: "🏛️" },
-        { text: "Best budget shopping markets (Sarojini & Janpath)", category: "tips", badge: "Bargain", icon: "🛍️" },
-      ];
-    }
-
     return [
-      { text: `Top tourist attractions & heritage landmarks in ${cityName}`, category: "places", badge: "Popular", icon: "🏛️" },
-      { text: `Famous local street food & best dining spots in ${cityName}`, category: "food", badge: "Foodie", icon: "🍲" },
-      { text: `Transit options, nearest railway station & airport in ${cityName}`, category: "transit", badge: "Transit", icon: "🚆" },
-      { text: `Best time of year to visit ${cityName} & weather guide`, category: "tips", badge: "Guide", icon: "🌤️" },
-      { text: `Scenic sunset viewpoints & evening hangout spots in ${cityName}`, category: "places", badge: "Scenic", icon: "🌅" },
-      { text: `Fastest travel routes and distance from ${cityName} to Delhi`, category: "transit", badge: "Route", icon: "🚗" },
+      { text: "Where is OpenSense Labs in Delhi NCR?", category: "places", badge: "Tech Hub", icon: "🏢" },
+      { text: "Best authentic street food in Chandni Chowk (Paranthe Wali Gali & Chaat)", category: "food", badge: "Must Try", icon: "🍲" },
+      { text: "How to reach Qutub Minar by Yellow Line Metro?", category: "transit", badge: "Transit", icon: "🚇" },
+      { text: "Top evening cafes & heritage walk in Connaught Place", category: "food", badge: "Dining", icon: "☕" },
+      { text: "Plan a 1-day itinerary of historic Delhi monuments", category: "places", badge: "Tour", icon: "🏛️" },
+      { text: "Best budget shopping markets in Delhi (Sarojini & Janpath)", category: "tips", badge: "Bargain", icon: "🛍️" },
     ];
   }, [currentLocationName, selectedLandmark]);
 
@@ -730,23 +719,23 @@ export function AskMapsModal({
                       ))}
                     </div>
 
-                    {/* Compact Suggestion Cards Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full text-left">
+                    {/* Compact Responsive Suggestion Cards Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full text-left">
                       {filteredSuggestions.map((s, idx) => (
                         <button
                           key={idx}
                           onClick={() => handleSendQuery(s.text)}
-                          className="p-3 rounded-2xl bg-white dark:bg-[#202124] border border-slate-200/80 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-md transition-all text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-start gap-2.5 active:scale-[0.98] group shadow-2xs"
+                          className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#202124] border border-slate-200/90 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-start gap-2.5 active:scale-[0.98] group shadow-xs"
                         >
-                          <span className="text-base shrink-0 p-1 rounded-lg bg-blue-50 dark:bg-blue-950/70 border border-blue-100 dark:border-blue-900/50">
+                          <span className="text-lg shrink-0 p-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/70 border border-blue-100 dark:border-blue-900/50 flex items-center justify-center">
                             {s.icon || "📍"}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400 leading-snug block line-clamp-2">
+                            <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400 leading-snug block line-clamp-2 text-[12px] sm:text-xs">
                               {s.text}
                             </span>
                             {s.badge && (
-                              <span className="inline-block mt-1.5 text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                              <span className="inline-block mt-2 text-[9.5px] font-extrabold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/90 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50">
                                 {s.badge}
                               </span>
                             )}
