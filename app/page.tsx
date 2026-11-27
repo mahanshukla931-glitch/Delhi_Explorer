@@ -446,12 +446,21 @@ export default function Home() {
   const handleCalculateRoute = async (
     destCoords: [number, number],
     destName: string,
-    mode: TravelMode = "driving"
+    mode: TravelMode = "driving",
+    customStartCoords?: [number, number],
+    customOriginName?: string
   ) => {
     try {
       setIsRoutingLoading(true);
-      const startCoords = userLocation.coords || DELHI_PRIMARY_LANDMARKS[0].coordinates; // Default to India Gate if GPS not allowed
-      const originName = userLocation.coords ? weatherLocation.name || "My Location" : "India Gate (Central Delhi)";
+      const startCoords =
+        customStartCoords ||
+        userLocation.coords ||
+        DELHI_PRIMARY_LANDMARKS[0].coordinates;
+      const originName =
+        customOriginName ||
+        (userLocation.coords
+          ? weatherLocation.name || "My Location"
+          : "India Gate (Central Delhi)");
 
       const res = await fetch(
         `/api/route?startLat=${startCoords[0]}&startLng=${startCoords[1]}&endLat=${destCoords[0]}&endLng=${destCoords[1]}&mode=${mode}`
@@ -744,9 +753,20 @@ export default function Home() {
             handleCalculateRoute(
               activeRoute.destinationCoords,
               activeRoute.destinationName,
-              mode
+              mode,
+              activeRoute.originCoords,
+              activeRoute.originName
             );
           }
+        }}
+        onUpdateRoute={(startCoords, destCoords, startName, destName, mode) => {
+          handleCalculateRoute(
+            destCoords,
+            destName,
+            mode || activeRoute?.mode || "driving",
+            startCoords,
+            startName
+          );
         }}
         isLoading={isRoutingLoading}
         onStartNavigation={() => {
