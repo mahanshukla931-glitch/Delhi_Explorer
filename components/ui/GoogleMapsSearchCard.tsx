@@ -428,8 +428,8 @@ export function GoogleMapsSearchCard({
         </div>
       </div>
 
-      {/* 2. Horizontal Category Chips with Mobile Weather & Ask AI */}
-      <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto py-0.5 px-0.5 max-w-[calc(100vw-24px)] scrollbar-none no-scrollbar">
+      {/* 2. Sleek Horizontal Category Chips */}
+      <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto py-1 px-0.5 max-w-[calc(100vw-24px)] scrollbar-none no-scrollbar select-none">
         {/* Mobile-only Live Weather Pill Chip */}
         {weatherLocation && (
           <div className="sm:hidden shrink-0">
@@ -442,20 +442,11 @@ export function GoogleMapsSearchCard({
           </div>
         )}
 
-        {/* Delhi Explorer AI Premier Chip */}
-        <button
-          onClick={onOpenAi}
-          className="px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md flex items-center gap-1.5 shrink-0 active:scale-95 hover:brightness-105 transition-all"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-          <span>Ask AI</span>
-        </button>
-
-        {/* Level 2: 1,200 Places Directory Chip */}
+        {/* 1. Level 2 Places Directory Chip */}
         {onTogglePlacesExplorer && (
           <button
             onClick={onTogglePlacesExplorer}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-md flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
+            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
               showPlacesExplorer
                 ? "bg-blue-600 text-white ring-2 ring-blue-400/40"
                 : "bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50"
@@ -466,11 +457,11 @@ export function GoogleMapsSearchCard({
           </button>
         )}
 
-        {/* Delhi Metro Network Chip */}
+        {/* 2. Delhi Metro Network Chip */}
         {onToggleMetroLines && (
           <button
             onClick={onToggleMetroLines}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-md flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
+            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
               showMetroLines
                 ? "bg-amber-500 text-white ring-2 ring-amber-300/40"
                 : "bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50"
@@ -481,11 +472,11 @@ export function GoogleMapsSearchCard({
           </button>
         )}
 
-        {/* Level 2: Delhi 11 Districts GeoJSON Chip */}
+        {/* 3. Delhi 11 Districts GeoJSON Chip */}
         {onToggleDistricts && (
           <button
             onClick={onToggleDistricts}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-md flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
+            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
               showDistricts
                 ? "bg-indigo-600 text-white ring-2 ring-indigo-400/40"
                 : "bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50"
@@ -496,26 +487,29 @@ export function GoogleMapsSearchCard({
           </button>
         )}
 
-        {categories.map((cat) => {
-          const isSelected = activeCategory === cat.id;
-          return (
-            <button
-              key={cat.id}
-              onClick={() => {
-                setActiveCategory(cat.id);
-                if (selectedLandmark) onSelectLandmark(null);
-              }}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all shadow-[0_1px_3px_rgba(60,64,67,0.3)] flex items-center gap-1.5 shrink-0 active:scale-95 ${
-                isSelected
-                  ? "bg-blue-600 text-white font-semibold shadow-md"
-                  : "bg-white dark:bg-[#202124] text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/60"
-              }`}
-            >
-              <span className="text-xs">{cat.icon}</span>
-              <span>{cat.label}</span>
-            </button>
-          );
-        })}
+        {/* 4. Filter categories (Monuments, Heritage, Religious, Shopping) */}
+        {categories
+          .filter((cat) => cat.id !== "all")
+          .map((cat) => {
+            const isSelected = activeCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  setActiveCategory(isSelected ? "all" : cat.id);
+                  if (selectedLandmark) onSelectLandmark(null);
+                }}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all shadow-xs flex items-center gap-1.5 shrink-0 active:scale-95 ${
+                  isSelected
+                    ? "bg-blue-600 text-white font-bold shadow-md ring-2 ring-blue-400/30"
+                    : "bg-white dark:bg-[#202124] text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-700/70"
+                }`}
+              >
+                <span className="text-xs">{cat.icon}</span>
+                <span>{cat.label}</span>
+              </button>
+            );
+          })}
       </div>
 
       {/* 3. Floating Place Details Card */}
