@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   MapPin,
@@ -10,6 +10,9 @@ import {
   Compass,
   Star,
   RotateCcw,
+  SlidersHorizontal,
+  Clock,
+  ArrowUpDown,
 } from "lucide-react";
 import { MarkerPoi } from "@/types/geojson";
 
@@ -25,6 +28,12 @@ interface SidebarProps {
   onSearchChange: (query: string) => void;
   totalCount: number;
   categoryCounts?: Record<string, number>;
+  activeDistrictFilter?: string | null;
+  onClearDistrictFilter?: () => void;
+  sortBy: "recommended" | "rating" | "reviews" | "name";
+  onSortChange: (sort: "recommended" | "rating" | "reviews" | "name") => void;
+  isOpenNowOnly: boolean;
+  onToggleOpenNowOnly: () => void;
 }
 
 export function Sidebar({
@@ -39,8 +48,15 @@ export function Sidebar({
   onSearchChange,
   totalCount,
   categoryCounts = {},
+  activeDistrictFilter,
+  onClearDistrictFilter,
+  sortBy,
+  onSortChange,
+  isOpenNowOnly,
+  onToggleOpenNowOnly,
 }: SidebarProps) {
   const selectedItemRef = useRef<HTMLButtonElement | null>(null);
+  const [showFiltersBar, setShowFiltersBar] = useState(false);
 
   // Auto-scroll selected marker into view in sidebar
   useEffect(() => {
@@ -76,7 +92,7 @@ export function Sidebar({
       )}
 
       <aside
-        className={`fixed top-0 left-0 z-40 h-[100dvh] w-[90vw] max-w-sm sm:w-[380px] bg-white dark:bg-[#1b1c1e] border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 z-40 h-[100dvh] w-[90vw] max-w-sm sm:w-[390px] bg-white dark:bg-[#1b1c1e] border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -108,17 +124,30 @@ export function Sidebar({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            aria-label="Close sidebar"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowFiltersBar(!showFiltersBar)}
+              className={`p-1.5 rounded-xl transition-colors ${
+                showFiltersBar || isOpenNowOnly || sortBy !== "recommended"
+                  ? "bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400"
+                  : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+              }`}
+              title="Filters & Sorting"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              aria-label="Close sidebar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Search & Category Filter Section */}
-        <div className="p-3 border-b border-slate-100 dark:border-slate-800 space-y-2.5 shrink-0 bg-slate-50/70 dark:bg-[#151618]">
+        <div className="p-3 border-b border-slate-100 dark:border-slate-800 space-y-2 shrink-0 bg-slate-50/70 dark:bg-[#151618]">
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -138,6 +167,105 @@ export function Sidebar({
               </button>
             )}
           </div>
+
+          {/* Active District Bridge Filter Banner */}
+          {activeDistrictFilter && (
+            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-xs">
+              <span className="flex items-center gap-1.5 text-blue-700 dark:text-blue-300 font-bold truncate">
+                <span>🏛️</span>
+                <span className="truncate">District: {activeDistrictFilter}</span>
+              </span>
+              {onClearDistrictFilter && (
+                <button
+                  onClick={onClearDistrictFilter}
+                  className="p-0.5 rounded text-blue-400 hover:text-blue-700 dark:hover:text-blue-200"
+                  title="Remove district filter"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Collapsible Pro Sorting & Quick Filter Toolbar */}
+          {(showFiltersBar || isOpenNowOnly || sortBy !== "recommended") && (
+            <div className="p-2 bg-white dark:bg-[#202124] rounded-xl border border-slate-200/80 dark:border-slate-700/60 space-y-1.5 animate-in fade-in text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
+                  <ArrowUpDown className="w-3 h-3 text-blue-500" />
+                  <span>Sort By:</span>
+                </span>
+                <div className="flex gap-1 text-[10px]">
+                  <button
+                    onClick={() => onSortChange("recommended")}
+                    className={`px-2 py-0.5 rounded-md font-semibold transition-all ${
+                      sortBy === "recommended"
+                        ? "bg-blue-600 text-white font-bold"
+                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    Default
+                  </button>
+                  <button
+                    onClick={() => onSortChange("rating")}
+                    className={`px-2 py-0.5 rounded-md font-semibold transition-all ${
+                      sortBy === "rating"
+                        ? "bg-amber-500 text-white font-bold"
+                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    ★ Rating
+                  </button>
+                  <button
+                    onClick={() => onSortChange("reviews")}
+                    className={`px-2 py-0.5 rounded-md font-semibold transition-all ${
+                      sortBy === "reviews"
+                        ? "bg-indigo-600 text-white font-bold"
+                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    Reviews
+                  </button>
+                  <button
+                    onClick={() => onSortChange("name")}
+                    className={`px-2 py-0.5 rounded-md font-semibold transition-all ${
+                      sortBy === "name"
+                        ? "bg-slate-700 text-white font-bold"
+                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    A-Z
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  onClick={onToggleOpenNowOnly}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                    isOpenNowOnly
+                      ? "bg-emerald-600 text-white"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                  }`}
+                >
+                  <Clock className="w-3 h-3" />
+                  <span>🟢 Open Now Only</span>
+                </button>
+
+                {(isOpenNowOnly || sortBy !== "recommended") && (
+                  <button
+                    onClick={() => {
+                      if (isOpenNowOnly) onToggleOpenNowOnly();
+                      onSortChange("recommended");
+                    }}
+                    className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline"
+                  >
+                    Reset filters
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Category Filter Pills */}
           <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none no-scrollbar">
@@ -177,16 +305,19 @@ export function Sidebar({
           <span className="font-semibold">
             Showing {markers.length} matching {markers.length === 1 ? "place" : "places"}
           </span>
-          {(searchQuery || selectedCategory !== "all") && (
+          {(searchQuery || selectedCategory !== "all" || activeDistrictFilter || isOpenNowOnly) && (
             <button
               onClick={() => {
                 onSearchChange("");
                 onSelectCategory("all");
+                if (onClearDistrictFilter) onClearDistrictFilter();
+                if (isOpenNowOnly) onToggleOpenNowOnly();
+                onSortChange("recommended");
               }}
               className="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline font-bold text-[10px]"
             >
               <RotateCcw className="w-2.5 h-2.5" />
-              <span>Reset</span>
+              <span>Reset All</span>
             </button>
           )}
         </div>
@@ -200,12 +331,15 @@ export function Sidebar({
                 No matching locations found
               </p>
               <p className="text-[11px] text-slate-400 mt-1 max-w-[220px] mx-auto">
-                No places found for &quot;{searchQuery || selectedCategory}&quot;. Try adjusting your search keyword or resetting filters.
+                No places found for &quot;{searchQuery || selectedCategory || activeDistrictFilter}&quot;. Try adjusting your filters.
               </p>
               <button
                 onClick={() => {
                   onSearchChange("");
                   onSelectCategory("all");
+                  if (onClearDistrictFilter) onClearDistrictFilter();
+                  if (isOpenNowOnly) onToggleOpenNowOnly();
+                  onSortChange("recommended");
                 }}
                 className="mt-4 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold shadow-xs hover:bg-blue-700 active:scale-95 transition-all"
               >

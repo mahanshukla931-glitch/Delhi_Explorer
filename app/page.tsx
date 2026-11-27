@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { GoogleMapsSearchCard } from "@/components/ui/GoogleMapsSearchCard";
 import { GoogleMapsDrawer } from "@/components/ui/GoogleMapsDrawer";
@@ -38,11 +38,14 @@ export default function Home() {
   const [sidebarCategory, setSidebarCategory] = useState("all");
   const [sidebarSearch, setSidebarSearch] = useState("");
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
+  const [activeDistrictFilter, setActiveDistrictFilter] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"recommended" | "rating" | "reviews" | "name">("recommended");
+  const [isOpenNowOnly, setIsOpenNowOnly] = useState<boolean>(false);
 
   // Level 2 State: Delhi 11 Districts GeoJSON & Choropleth
   const [showDistrictsGeoJson, setShowDistrictsGeoJson] = useState(true);
   const [activeChoroplethMetric, setActiveChoroplethMetric] = useState<
-    "density" | "population" | "literacyRate"
+    "density" | "population" | "literacyRate" | "areaKm2"
   >("density");
   const [selectedDistrict, setSelectedDistrict] = useState<DistrictProperties | null>(null);
 
@@ -88,12 +91,27 @@ export default function Home() {
       });
   }, []);
 
-  // Level 2: Bi-directional filtering on Category and Search Query
+  // Level 2 Pro: Bi-directional filtering on Category, District, Open Now, Search Query, & Sorting
   useEffect(() => {
-    let result = allMarkers;
+    let result = [...allMarkers];
+
     if (sidebarCategory !== "all") {
       result = result.filter((m) => m.category === sidebarCategory);
     }
+
+    if (activeDistrictFilter) {
+      const distLower = activeDistrictFilter.toLowerCase().replace("delhi", "").trim();
+      result = result.filter(
+        (m) =>
+          m.address?.toLowerCase().includes(distLower) ||
+          m.hub?.toLowerCase().includes(distLower)
+      );
+    }
+
+    if (isOpenNowOnly) {
+      result = result.filter((m) => m.isOpenNow);
+    }
+
     if (sidebarSearch.trim()) {
       const q = sidebarSearch.toLowerCase();
       result = result.filter(
@@ -103,8 +121,34 @@ export default function Home() {
           m.address?.toLowerCase().includes(q)
       );
     }
+
+    // Pro Sorting Controls
+    if (sortBy === "rating") {
+      result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    } else if (sortBy === "reviews") {
+      result.sort((a, b) => (b.reviewsCount || 0) - (a.reviewsCount || 0));
+    } else if (sortBy === "name") {
+      result.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
     setFilteredMarkers(result);
-  }, [allMarkers, sidebarCategory, sidebarSearch]);
+  }, [allMarkers, sidebarCategory, activeDistrictFilter, isOpenNowOnly, sidebarSearch, sortBy]);
+
+  // District POI count bridge
+  const districtPoiCount = useMemo(() => {
+    if (!selectedDistrict || !allMarkers.length) return 0;
+    const nameLower = selectedDistrict.name.toLowerCase().replace("delhi", "").trim();
+    return allMarkers.filter(
+      (m) =>
+        m.address?.toLowerCase().includes(nameLower) ||
+        m.hub?.toLowerCase().includes(nameLower)
+    ).length;
+  }, [selectedDistrict, allMarkers]);
+
+  const handleViewDistrictPlaces = (districtName: string) => {
+    setActiveDistrictFilter(districtName);
+    setIsPlacesExplorerOpen(true);
+  };
 
   // Auto-detect user GPS on initial load
   useEffect(() => {
@@ -335,7 +379,7 @@ export default function Home() {
         />
       </div>
 
-      {/* Level 2: Delhi 11 Districts Choropleth Legend & District Card */}
+      {/* Level 2: Delhi 11 Districts Choropleth Legend & District Card with POI Bridge */}
       <ChoroplethLegend
         visible={showDistrictsGeoJson}
         activeMetric={activeChoroplethMetric}
@@ -343,9 +387,11 @@ export default function Home() {
         onCloseDistrict={() => setSelectedDistrict(null)}
         onChangeMetric={setActiveChoroplethMetric}
         onToggleVisible={() => setShowDistrictsGeoJson(false)}
+        districtPoiCount={districtPoiCount}
+        onViewDistrictPlaces={handleViewDistrictPlaces}
       />
 
-      {/* Level 2: Places Explorer Sidebar (1,200 Markers with Bi-directional Sync) */}
+      {/* Level 2 Pro: Places Explorer Sidebar with Sorting & Open Now Filter */}
       <Sidebar
         markers={filteredMarkers}
         selectedMarkerId={selectedClusterMarker?.id || null}
@@ -358,6 +404,12 @@ export default function Home() {
         onSearchChange={setSidebarSearch}
         totalCount={allMarkers.length || 1200}
         categoryCounts={categoryCounts}
+        activeDistrictFilter={activeDistrictFilter}
+        onClearDistrictFilter={() => setActiveDistrictFilter(null)}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+        isOpenNowOnly={isOpenNowOnly}
+        onToggleOpenNowOnly={() => setIsOpenNowOnly((prev) => !prev)}
       />
 
       {/* Hamburger Navigation Drawer */}
@@ -386,6 +438,28 @@ export default function Home() {
         userCoordinates={weatherLocation.coords}
         selectedLandmark={selectedLandmark}
       />
+
+      {/* Level 2 Pro: Floating Places Filter Active Banner */}
+      {(filteredMarkers.length < allMarkers.length || activeDistrictFilter || isOpenNowOnly) && (
+        <div className="absolute bottom-5 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-auto bg-white/95 dark:bg-[#1e2023]/95 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-xl border border-blue-400 dark:border-blue-600 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 text-xs select-none">
+          <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+          <span className="font-bold text-slate-800 dark:text-slate-100">
+            Showing {filteredMarkers.length} of {allMarkers.length} places
+          </span>
+          <button
+            onClick={() => {
+              setSidebarCategory("all");
+              setSidebarSearch("");
+              setActiveDistrictFilter(null);
+              setIsOpenNowOnly(false);
+              setSortBy("recommended");
+            }}
+            className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline ml-1"
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
 
       {/* Global Error Banner */}
       {errorNotice && (

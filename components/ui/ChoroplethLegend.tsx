@@ -2,15 +2,17 @@
 
 import React, { useState } from "react";
 import { DistrictProperties } from "@/types/geojson";
-import { Layers, ChevronDown, ChevronUp, X, MapPin } from "lucide-react";
+import { Layers, ChevronDown, ChevronUp, X, MapPin, ExternalLink } from "lucide-react";
 
 interface ChoroplethLegendProps {
   visible: boolean;
-  activeMetric: "density" | "population" | "literacyRate";
+  activeMetric: "density" | "population" | "literacyRate" | "areaKm2";
   selectedDistrict: DistrictProperties | null;
   onCloseDistrict: () => void;
-  onChangeMetric: (metric: "density" | "population" | "literacyRate") => void;
+  onChangeMetric: (metric: "density" | "population" | "literacyRate" | "areaKm2") => void;
   onToggleVisible?: () => void;
+  districtPoiCount?: number;
+  onViewDistrictPlaces?: (districtName: string) => void;
 }
 
 export function ChoroplethLegend({
@@ -20,6 +22,8 @@ export function ChoroplethLegend({
   onCloseDistrict,
   onChangeMetric,
   onToggleVisible,
+  districtPoiCount = 0,
+  onViewDistrictPlaces,
 }: ChoroplethLegendProps) {
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -51,15 +55,25 @@ export function ChoroplethLegend({
     { label: "< 85%", color: "#a1d99b" },
   ];
 
+  const areaGrades = [
+    { label: "> 400 km²", color: "#08519c" },
+    { label: "250 – 400", color: "#3182bd" },
+    { label: "100 – 250", color: "#6baed6" },
+    { label: "50 – 100", color: "#9ecae1" },
+    { label: "< 50 km²", color: "#c6dbef" },
+  ];
+
   const activeGrades =
     activeMetric === "density"
       ? densityGrades
       : activeMetric === "population"
       ? populationGrades
-      : literacyGrades;
+      : activeMetric === "literacyRate"
+      ? literacyGrades
+      : areaGrades;
 
   return (
-    <div className="absolute top-24 sm:top-28 right-3 sm:right-4 z-20 flex flex-col gap-2 max-w-[270px] pointer-events-auto select-none">
+    <div className="absolute top-24 sm:top-28 right-3 sm:right-4 z-20 flex flex-col gap-2 max-w-[280px] pointer-events-auto select-none">
       {/* Metric Switcher & Legend Pill Box */}
       <div className="bg-white/95 dark:bg-[#1f2023]/95 backdrop-blur-md rounded-2xl p-3 shadow-xl border border-slate-200/90 dark:border-slate-700/80 transition-all">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2">
@@ -99,8 +113,8 @@ export function ChoroplethLegend({
 
         {!isMinimized && (
           <>
-            {/* Metric Switch Tabs */}
-            <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-xl mb-2.5 text-[10px]">
+            {/* Metric Switch Tabs (4 Options) */}
+            <div className="grid grid-cols-4 gap-1 bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-xl mb-2.5 text-[9px]">
               <button
                 onClick={() => onChangeMetric("density")}
                 className={`py-1 rounded-lg font-semibold transition-all ${
@@ -131,6 +145,16 @@ export function ChoroplethLegend({
               >
                 Literacy
               </button>
+              <button
+                onClick={() => onChangeMetric("areaKm2")}
+                className={`py-1 rounded-lg font-semibold transition-all ${
+                  activeMetric === "areaKm2"
+                    ? "bg-white dark:bg-blue-600 text-slate-900 dark:text-white font-bold shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                }`}
+              >
+                Area
+              </button>
             </div>
 
             {/* Color Ramp */}
@@ -152,7 +176,7 @@ export function ChoroplethLegend({
         )}
       </div>
 
-      {/* Selected District Metadata Popover */}
+      {/* Selected District Metadata Popover & POI Bridge */}
       {selectedDistrict && (
         <div className="bg-white/95 dark:bg-[#1f2023]/95 backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border-2 border-blue-500/80 animate-in fade-in slide-in-from-top-2">
           <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2">
@@ -224,6 +248,17 @@ export function ChoroplethLegend({
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* Pro District ↔ Marker Bridge Action */}
+            {onViewDistrictPlaces && (
+              <button
+                onClick={() => onViewDistrictPlaces(selectedDistrict.name)}
+                className="w-full mt-2.5 py-1.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all"
+              >
+                <span>Explore {districtPoiCount > 0 ? `${districtPoiCount} Places` : "Places"} Here</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
             )}
           </div>
         </div>

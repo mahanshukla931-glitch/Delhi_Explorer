@@ -44,7 +44,7 @@ interface MapViewProps {
   isDarkMode?: boolean;
   // Level 2 Additions:
   showDistricts?: boolean;
-  activeChoroplethMetric?: "density" | "population" | "literacyRate";
+  activeChoroplethMetric?: "density" | "population" | "literacyRate" | "areaKm2";
   onSelectDistrict?: (props: DistrictProperties | null) => void;
   showMarkerClusters?: boolean;
   clusterMarkers?: MarkerPoi[];

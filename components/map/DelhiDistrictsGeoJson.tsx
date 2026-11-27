@@ -8,7 +8,7 @@ import type { Feature } from "geojson";
 
 interface DelhiDistrictsGeoJsonProps {
   visible: boolean;
-  activeMetric: "density" | "population" | "literacyRate";
+  activeMetric: "density" | "population" | "literacyRate" | "areaKm2";
   onSelectDistrict: (props: DistrictProperties | null) => void;
   isDarkMode?: boolean;
 }
@@ -35,7 +35,7 @@ export function DelhiDistrictsGeoJson({
   if (!visible || !geoData) return null;
 
   // Choropleth color calculation based on selected demographic metric
-  const getColor = (value: number, metric: "density" | "population" | "literacyRate") => {
+  const getColor = (value: number, metric: "density" | "population" | "literacyRate" | "areaKm2") => {
     if (metric === "density") {
       // Density people/km2
       return value > 25000
@@ -62,7 +62,7 @@ export function DelhiDistrictsGeoJson({
         : value > 1000000
         ? "#bcbddc"
         : "#dadaeb";
-    } else {
+    } else if (metric === "literacyRate") {
       // Literacy Rate %
       return value > 88
         ? "#005a32"
@@ -73,6 +73,17 @@ export function DelhiDistrictsGeoJson({
         : value > 85
         ? "#74c476"
         : "#a1d99b";
+    } else {
+      // Area in km2
+      return value > 400
+        ? "#08519c"
+        : value > 250
+        ? "#3182bd"
+        : value > 100
+        ? "#6baed6"
+        : value > 50
+        ? "#9ecae1"
+        : "#c6dbef";
     }
   };
 
@@ -125,7 +136,9 @@ export function DelhiDistrictsGeoJson({
         ? `Density: ${props.density?.toLocaleString()} /km²`
         : activeMetric === "population"
         ? `Population: ${props.population?.toLocaleString()}`
-        : `Literacy: ${props.literacyRate}%`;
+        : activeMetric === "literacyRate"
+        ? `Literacy: ${props.literacyRate}%`
+        : `Area: ${props.areaKm2} km²`;
 
     layer.bindTooltip(
       `<div style="font-family: system-ui, sans-serif; font-size: 11px;">
