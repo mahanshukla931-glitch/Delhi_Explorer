@@ -7,6 +7,7 @@ import { GoogleMapsDrawer } from "@/components/ui/GoogleMapsDrawer";
 import { AskMapsModal } from "@/components/ui/AskMapsModal";
 import { DelhiWeatherWidget } from "@/components/ui/DelhiWeatherWidget";
 import { MapLoadingSkeleton } from "@/components/ui/MapLoadingSkeleton";
+import { MapErrorBoundary } from "@/components/ui/MapErrorBoundary";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { ChoroplethLegend } from "@/components/ui/ChoroplethLegend";
 import { LayerType, LandmarkLocation, UserLocationState } from "@/types/map";
@@ -401,23 +402,25 @@ export default function Home() {
 
       {/* Full-screen Leaflet Map Canvas */}
       <main className="w-full h-full relative">
-        <DynamicMapView
-          activeLayer={activeLayer}
-          onChangeLayer={setActiveLayer}
-          selectedLandmark={selectedLandmark}
-          onSelectLandmark={handleSelectLandmark}
-          flyToLocation={flyToCoords}
-          userLocation={userLocation}
-          onLocateUser={handleLocateUser}
-          isDarkMode={isDarkMode}
-          showDistricts={showDistrictsGeoJson}
-          activeChoroplethMetric={activeChoroplethMetric}
-          onSelectDistrict={setSelectedDistrict}
-          showMarkerClusters={showMarkerClusters}
-          clusterMarkers={filteredMarkers}
-          selectedClusterMarkerId={selectedClusterMarker?.id || null}
-          onSelectClusterMarker={handleSelectClusterMarker}
-        />
+        <MapErrorBoundary fallbackTitle="Map Rendering Error">
+          <DynamicMapView
+            activeLayer={activeLayer}
+            onChangeLayer={setActiveLayer}
+            selectedLandmark={selectedLandmark}
+            onSelectLandmark={handleSelectLandmark}
+            flyToLocation={flyToCoords}
+            userLocation={userLocation}
+            onLocateUser={handleLocateUser}
+            isDarkMode={isDarkMode}
+            showDistricts={showDistrictsGeoJson}
+            activeChoroplethMetric={activeChoroplethMetric}
+            onSelectDistrict={setSelectedDistrict}
+            showMarkerClusters={showMarkerClusters}
+            clusterMarkers={filteredMarkers}
+            selectedClusterMarkerId={selectedClusterMarker?.id || null}
+            onSelectClusterMarker={handleSelectClusterMarker}
+          />
+        </MapErrorBoundary>
       </main>
     </div>
   );

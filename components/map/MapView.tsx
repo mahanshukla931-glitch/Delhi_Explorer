@@ -29,6 +29,10 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
+if (typeof window !== "undefined") {
+  (window as unknown as { L: typeof L }).L = L;
+}
+
 interface MapViewProps {
   activeLayer: LayerType;
   onChangeLayer: (layer: LayerType) => void;
