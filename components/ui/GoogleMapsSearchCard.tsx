@@ -452,33 +452,33 @@ export function GoogleMapsSearchCard({
           </div>
         )}
 
-        {/* 1. Level 2 Places Directory Chip */}
-        {onTogglePlacesExplorer && (
+        {/* 1. Level 3: Geoman Drawing & Measurement Tools Chip (Prominent) */}
+        {onToggleDrawTools && (
           <button
-            onClick={onTogglePlacesExplorer}
+            onClick={onToggleDrawTools}
             className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
-              showPlacesExplorer
-                ? "bg-blue-600 text-white ring-2 ring-blue-400/40"
+              showDrawTools
+                ? "bg-purple-600 text-white ring-2 ring-purple-400/40"
                 : "bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50"
             }`}
           >
-            <MapPin className="w-3.5 h-3.5 text-blue-500" />
-            <span>1,200 Places</span>
+            <span>✏️</span>
+            <span>Draw</span>
           </button>
         )}
 
-        {/* 2. Delhi Metro Network Chip */}
-        {onToggleMetroLines && (
+        {/* 2. Level 3: Overpass API Find Nearby Chip (Prominent) */}
+        {onToggleNearbyPlaces && (
           <button
-            onClick={onToggleMetroLines}
+            onClick={onToggleNearbyPlaces}
             className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
-              showMetroLines
-                ? "bg-amber-500 text-white ring-2 ring-amber-300/40"
+              isNearbyActive
+                ? "bg-emerald-600 text-white ring-2 ring-emerald-400/40"
                 : "bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50"
             }`}
           >
-            <Train className="w-3.5 h-3.5 text-amber-500" />
-            <span>Metro</span>
+            <span>🔍</span>
+            <span>Nearby</span>
           </button>
         )}
 
@@ -497,33 +497,33 @@ export function GoogleMapsSearchCard({
           </button>
         )}
 
-        {/* 4. Level 3: Geoman Drawing & Measurement Tools Chip */}
-        {onToggleDrawTools && (
+        {/* 4. Level 2 Places Directory Chip (Desktop visible; on mobile accessible via bottom bar) */}
+        {onTogglePlacesExplorer && (
           <button
-            onClick={onToggleDrawTools}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
-              showDrawTools
-                ? "bg-purple-600 text-white ring-2 ring-purple-400/40"
+            onClick={onTogglePlacesExplorer}
+            className={`hidden sm:flex px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
+              showPlacesExplorer
+                ? "bg-blue-600 text-white ring-2 ring-blue-400/40"
                 : "bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50"
             }`}
           >
-            <span>✏️</span>
-            <span>Draw & Measure</span>
+            <MapPin className="w-3.5 h-3.5 text-blue-500" />
+            <span>1,200 Places</span>
           </button>
         )}
 
-        {/* 5. Level 3: Overpass API Find Nearby Chip */}
-        {onToggleNearbyPlaces && (
+        {/* 5. Delhi Metro Network Chip (Desktop visible; on mobile accessible via bottom bar) */}
+        {onToggleMetroLines && (
           <button
-            onClick={onToggleNearbyPlaces}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
-              isNearbyActive
-                ? "bg-emerald-600 text-white ring-2 ring-emerald-400/40"
+            onClick={onToggleMetroLines}
+            className={`hidden sm:flex px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
+              showMetroLines
+                ? "bg-amber-500 text-white ring-2 ring-amber-300/40"
                 : "bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50"
             }`}
           >
-            <span>🔍</span>
-            <span>Find Nearby</span>
+            <Train className="w-3.5 h-3.5 text-amber-500" />
+            <span>Metro</span>
           </button>
         )}
 

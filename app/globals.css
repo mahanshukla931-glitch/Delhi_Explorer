@@ -195,6 +195,63 @@ html.dark .leaflet-popup-close-button {
   }
 }
 
+/* ==========================================================================
+   Level 3: Geoman Drawing Toolbar Sleek Positioning & Google Maps Theme
+   ========================================================================== */
+.leaflet-top.leaflet-left {
+  top: 130px !important;
+  left: 12px !important;
+  z-index: 500 !important;
+}
+
+@media (min-width: 640px) {
+  .leaflet-top.leaflet-left {
+    top: 122px !important;
+    left: 16px !important;
+  }
+}
+
+.leaflet-pm-toolbar {
+  border-radius: 14px !important;
+  border: 1px solid rgba(226, 232, 240, 0.95) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16) !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+}
+
+html.dark .leaflet-pm-toolbar {
+  border-color: rgba(51, 65, 85, 0.9) !important;
+  background: #1e2023 !important;
+}
+
+.leaflet-pm-toolbar .leaflet-buttons-control-button {
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  background-color: #ffffff !important;
+  color: #334155 !important;
+  border-bottom: 1px solid rgba(241, 245, 249, 1) !important;
+  transition: all 0.15s ease !important;
+}
+
+html.dark .leaflet-pm-toolbar .leaflet-buttons-control-button {
+  background-color: #1e2023 !important;
+  color: #cbd5e1 !important;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.6) !important;
+}
+
+.leaflet-pm-toolbar .leaflet-buttons-control-button:hover,
+.leaflet-pm-toolbar .leaflet-buttons-control-button.active {
+  background-color: #eff6ff !important;
+  color: #2563eb !important;
+}
+
+html.dark .leaflet-pm-toolbar .leaflet-buttons-control-button:hover,
+html.dark .leaflet-pm-toolbar .leaflet-buttons-control-button.active {
+  background-color: #1e3a8a !important;
+  color: #60a5fa !important;
+}
+
 .animate-border-rotate {
   animation: border-rotate 3s linear infinite;
 }

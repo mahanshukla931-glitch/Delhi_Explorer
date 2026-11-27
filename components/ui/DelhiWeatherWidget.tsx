@@ -175,7 +175,7 @@ export function DelhiWeatherWidget({
               {info.label}
             </span>
             <span className="text-slate-400 font-normal hidden md:inline">•</span>
-            <span className="text-blue-600 dark:text-blue-400 font-bold max-w-[120px] truncate">
+            <span className="text-blue-600 dark:text-blue-400 font-bold max-w-[120px] truncate hidden sm:inline">
               {locationName}
             </span>
           </div>

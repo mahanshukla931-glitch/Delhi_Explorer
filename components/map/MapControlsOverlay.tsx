@@ -102,13 +102,13 @@ export function MapControlsOverlay({
       {/* Bottom-Left: Google Maps Style Layer Switcher Floating Button */}
       <div
         className="leaflet-bottom leaflet-left"
-        style={{ pointerEvents: "auto", margin: "16px", zIndex: 1000 }}
+        style={{ pointerEvents: "auto", zIndex: 1000 }}
       >
-        <div className="relative">
+        <div className="relative mb-24 sm:mb-6 ml-3 sm:ml-4">
           <button
             onClick={() => setShowLayerMenu((prev) => !prev)}
             aria-label="Layers"
-            className="group flex items-center gap-2 bg-white dark:bg-[#202124] hover:bg-slate-50 dark:hover:bg-[#2d2e30] border border-slate-200/80 dark:border-slate-700/60 rounded-xl p-1.5 pr-3 shadow-[0_2px_6px_rgba(60,64,67,0.3)] transition-all active:scale-95"
+            className="group flex items-center gap-2 bg-white dark:bg-[#202124] hover:bg-slate-50 dark:hover:bg-[#2d2e30] border border-slate-200/80 dark:border-slate-700/60 rounded-xl p-1.5 pr-3 shadow-[0_4px_14px_rgba(0,0,0,0.18)] transition-all active:scale-95"
           >
             <div className="w-10 h-10 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xl">
               {activeLayer === "satellite" ? "🛰️" : activeLayer === "terrain" ? "🏔️" : "🗺️"}
@@ -159,15 +159,45 @@ export function MapControlsOverlay({
       {/* Bottom-Right: Google Maps Style Floating Action Controls */}
       <div
         className="leaflet-bottom leaflet-right"
-        style={{ pointerEvents: "auto", margin: "16px", zIndex: 1000 }}
+        style={{ pointerEvents: "auto", zIndex: 1000 }}
       >
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col items-center gap-2 mb-24 sm:mb-6 mr-3 sm:mr-4">
+          {/* Google Maps Style Clean Pill Zoom Controls (+ / -) - High Visibility */}
+          <div className="flex flex-col bg-white dark:bg-[#202124] rounded-2xl border border-slate-200/90 dark:border-slate-700/80 shadow-[0_4px_14px_rgba(0,0,0,0.18)] overflow-hidden">
+            <button
+              onClick={() => map.zoomIn()}
+              title="Zoom in (+)"
+              aria-label="Zoom in"
+              className="w-10 h-10 flex items-center justify-center text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border-b border-slate-100 dark:border-slate-700 active:bg-blue-50 dark:active:bg-blue-950"
+            >
+              <Plus className="w-5 h-5 stroke-[2.5]" />
+            </button>
+            <button
+              onClick={() => map.zoomOut()}
+              title="Zoom out (-)"
+              aria-label="Zoom out"
+              className="w-10 h-10 flex items-center justify-center text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:bg-blue-50 dark:active:bg-blue-950"
+            >
+              <Minus className="w-5 h-5 stroke-[2.5]" />
+            </button>
+          </div>
+
+          {/* Compass / Recenter Delhi */}
+          <button
+            onClick={handleResetDelhi}
+            title="Recenter to Central Delhi"
+            aria-label="Recenter Delhi"
+            className="w-10 h-10 rounded-full bg-white dark:bg-[#202124] border border-slate-200/80 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.18)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95"
+          >
+            <Compass className="w-5 h-5 text-rose-500" />
+          </button>
+
           {/* 1-Click Share View URL Button */}
           <button
             onClick={handleShareView}
             title={isCopied ? "Link Copied!" : "Share Map View"}
             aria-label="Share Map View"
-            className="w-10 h-10 rounded-full bg-white dark:bg-[#202124] border border-slate-200/80 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 flex items-center justify-center shadow-[0_2px_6px_rgba(60,64,67,0.3)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 group relative"
+            className="w-10 h-10 rounded-full bg-white dark:bg-[#202124] border border-slate-200/80 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.18)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 group relative"
           >
             {isCopied ? (
               <Check className="w-4 h-4 text-emerald-600 animate-in zoom-in" />
@@ -176,12 +206,12 @@ export function MapControlsOverlay({
             )}
           </button>
 
-          {/* Fullscreen Toggle Button */}
+          {/* Fullscreen Toggle Button (Desktop view only, keeps mobile view clutter-free) */}
           <button
             onClick={handleToggleFullscreen}
             title={isFullscreen ? "Exit Fullscreen" : "Toggle Fullscreen"}
             aria-label="Fullscreen"
-            className="w-10 h-10 rounded-full bg-white dark:bg-[#202124] border border-slate-200/80 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 flex items-center justify-center shadow-[0_2px_6px_rgba(60,64,67,0.3)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95"
+            className="hidden sm:flex w-10 h-10 rounded-full bg-white dark:bg-[#202124] border border-slate-200/80 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.18)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95"
           >
             {isFullscreen ? (
               <Minimize2 className="w-4 h-4 text-slate-700 dark:text-slate-200" />
@@ -190,23 +220,13 @@ export function MapControlsOverlay({
             )}
           </button>
 
-          {/* Compass / Recenter Delhi */}
-          <button
-            onClick={handleResetDelhi}
-            title="Recenter to Central Delhi"
-            aria-label="Recenter Delhi"
-            className="w-10 h-10 rounded-full bg-white dark:bg-[#202124] border border-slate-200/80 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 flex items-center justify-center shadow-[0_2px_6px_rgba(60,64,67,0.3)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95"
-          >
-            <Compass className="w-5 h-5 text-rose-500" />
-          </button>
-
-          {/* Locate Me (GPS) Button */}
+          {/* Desktop Locate Me Button (On mobile, Locate is prominently in MobileBottomBar) */}
           <button
             onClick={onLocateUser}
             disabled={userLocation.loading}
             title="Your Location"
             aria-label="Locate me"
-            className="w-10 h-10 rounded-full bg-white dark:bg-[#202124] border border-slate-200/80 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 flex items-center justify-center shadow-[0_2px_6px_rgba(60,64,67,0.3)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-50"
+            className="hidden sm:flex w-10 h-10 rounded-full bg-white dark:bg-[#202124] border border-slate-200/80 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.18)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-50"
           >
             {userLocation.loading ? (
               <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
@@ -214,24 +234,6 @@ export function MapControlsOverlay({
               <Crosshair className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             )}
           </button>
-
-          {/* Google Maps Style Clean Pill Zoom Controls (+ / -) */}
-          <div className="flex flex-col bg-white dark:bg-[#202124] rounded-full border border-slate-200/80 dark:border-slate-700/60 shadow-[0_2px_6px_rgba(60,64,67,0.3)] overflow-hidden">
-            <button
-              onClick={() => map.zoomIn()}
-              title="Zoom in"
-              className="w-10 h-10 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border-b border-slate-100 dark:border-slate-700"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => map.zoomOut()}
-              title="Zoom out"
-              className="w-10 h-10 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              <Minus className="w-5 h-5" />
-            </button>
-          </div>
         </div>
       </div>
 
