@@ -26,6 +26,12 @@ interface GoogleMapsDrawerProps {
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
   onOpenAskMaps?: () => void;
+  showDistricts?: boolean;
+  onToggleDistricts?: () => void;
+  showMarkerClusters?: boolean;
+  onToggleMarkerClusters?: () => void;
+  onOpenPlacesExplorer?: () => void;
+  totalMarkersCount?: number;
 }
 
 export function GoogleMapsDrawer({
@@ -36,6 +42,12 @@ export function GoogleMapsDrawer({
   isDarkMode,
   onToggleDarkMode,
   onOpenAskMaps,
+  showDistricts = true,
+  onToggleDistricts,
+  showMarkerClusters = true,
+  onToggleMarkerClusters,
+  onOpenPlacesExplorer,
+  totalMarkersCount = 1200,
 }: GoogleMapsDrawerProps) {
   const [savedCount, setSavedCount] = useState(0);
 
@@ -222,6 +234,95 @@ export function GoogleMapsDrawer({
                 <div className="w-5 h-5 rounded-full bg-white shadow-xs" />
               </button>
             </div>
+
+            {/* Level 2: Delhi 11 Districts Choropleth Toggle */}
+            {onToggleDistricts && (
+              <div className="p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-2xs text-sm">
+                    🏛️
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block leading-tight">
+                      Delhi Districts Layer
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      11 Districts GeoJSON Choropleth
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={onToggleDistricts}
+                  className={`w-11 h-6 flex items-center rounded-full p-0.5 cursor-pointer transition-colors ${
+                    showDistricts ? "bg-indigo-600 justify-end" : "bg-slate-300 dark:bg-slate-600 justify-start"
+                  }`}
+                  aria-label="Toggle Districts Layer"
+                >
+                  <div className="w-5 h-5 rounded-full bg-white shadow-xs" />
+                </button>
+              </div>
+            )}
+
+            {/* Level 2: Marker Clustering Toggle */}
+            {onToggleMarkerClusters && (
+              <div className="p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-2xs text-sm">
+                    📍
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block leading-tight">
+                      Marker Clustering
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      1,200 High-Performance POIs
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={onToggleMarkerClusters}
+                  className={`w-11 h-6 flex items-center rounded-full p-0.5 cursor-pointer transition-colors ${
+                    showMarkerClusters ? "bg-rose-600 justify-end" : "bg-slate-300 dark:bg-slate-600 justify-start"
+                  }`}
+                  aria-label="Toggle Marker Clustering"
+                >
+                  <div className="w-5 h-5 rounded-full bg-white shadow-xs" />
+                </button>
+              </div>
+            )}
+
+            {/* Level 2: Places Explorer (1,200 Markers) */}
+            {onOpenPlacesExplorer && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenPlacesExplorer();
+                }}
+                className="w-full p-3 flex items-center justify-between text-left hover:bg-white dark:hover:bg-slate-800/60 transition-colors group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center shadow-2xs">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block leading-tight">
+                      Places Explorer
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      1,200+ Clustered Directory & Filters
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                    {totalMarkersCount}
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
+                </div>
+              </button>
+            )}
 
             {/* Saved Places */}
             {onOpenAskMaps && (

@@ -17,6 +17,7 @@ import {
   Train,
   Bookmark,
   Star,
+  MapPin,
 } from "lucide-react";
 import { DELHI_PRIMARY_LANDMARKS } from "@/lib/constants";
 import { LandmarkLocation } from "@/types/map";
@@ -33,6 +34,11 @@ interface GoogleMapsSearchCardProps {
     coords: [number, number];
     name: string;
   };
+  showDistricts?: boolean;
+  onToggleDistricts?: () => void;
+  showPlacesExplorer?: boolean;
+  onTogglePlacesExplorer?: () => void;
+  totalMarkersCount?: number;
 }
 
 interface SearchResultItem {
@@ -68,6 +74,10 @@ export function GoogleMapsSearchCard({
   onToggleMenu,
   onOpenAi,
   weatherLocation,
+  showDistricts,
+  onToggleDistricts,
+  showPlacesExplorer,
+  onTogglePlacesExplorer,
 }: GoogleMapsSearchCardProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("all");
@@ -433,6 +443,36 @@ export function GoogleMapsSearchCard({
           <Sparkles className="w-3.5 h-3.5 text-amber-300" />
           <span>Ask AI</span>
         </button>
+
+        {/* Level 2: 1,200 Places Directory Chip */}
+        {onTogglePlacesExplorer && (
+          <button
+            onClick={onTogglePlacesExplorer}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-md flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
+              showPlacesExplorer
+                ? "bg-blue-600 text-white ring-2 ring-blue-400/40"
+                : "bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <MapPin className="w-3.5 h-3.5 text-blue-500" />
+            <span>1,200 Places</span>
+          </button>
+        )}
+
+        {/* Level 2: Delhi 11 Districts GeoJSON Chip */}
+        {onToggleDistricts && (
+          <button
+            onClick={onToggleDistricts}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-md flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
+              showDistricts
+                ? "bg-indigo-600 text-white ring-2 ring-indigo-400/40"
+                : "bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <span>🏛️</span>
+            <span>Districts</span>
+          </button>
+        )}
 
         {categories.map((cat) => {
           const isSelected = activeCategory === cat.id;

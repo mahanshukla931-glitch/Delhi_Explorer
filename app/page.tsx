@@ -7,7 +7,10 @@ import { GoogleMapsDrawer } from "@/components/ui/GoogleMapsDrawer";
 import { AskMapsModal } from "@/components/ui/AskMapsModal";
 import { DelhiWeatherWidget } from "@/components/ui/DelhiWeatherWidget";
 import { MapLoadingSkeleton } from "@/components/ui/MapLoadingSkeleton";
+import { Sidebar } from "@/components/sidebar/Sidebar";
+import { ChoroplethLegend } from "@/components/ui/ChoroplethLegend";
 import { LayerType, LandmarkLocation, UserLocationState } from "@/types/map";
+import { DistrictProperties, MarkerPoi } from "@/types/geojson";
 import { DELHI_PRIMARY_LANDMARKS } from "@/lib/constants";
 
 // Client-only dynamic import of MapView to avoid SSR issues
@@ -24,6 +27,23 @@ export default function Home() {
   const [isAskMapsOpen, setIsAskMapsOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
+
+  // Level 2 State: 1,200 Marker API & Places Explorer
+  const [allMarkers, setAllMarkers] = useState<MarkerPoi[]>([]);
+  const [filteredMarkers, setFilteredMarkers] = useState<MarkerPoi[]>([]);
+  const [selectedClusterMarker, setSelectedClusterMarker] = useState<MarkerPoi | null>(null);
+  const [showMarkerClusters, setShowMarkerClusters] = useState(true);
+  const [isPlacesExplorerOpen, setIsPlacesExplorerOpen] = useState(false);
+  const [sidebarCategory, setSidebarCategory] = useState("all");
+  const [sidebarSearch, setSidebarSearch] = useState("");
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
+
+  // Level 2 State: Delhi 11 Districts GeoJSON & Choropleth
+  const [showDistrictsGeoJson, setShowDistrictsGeoJson] = useState(true);
+  const [activeChoroplethMetric, setActiveChoroplethMetric] = useState<
+    "density" | "population" | "literacyRate"
+  >("density");
+  const [selectedDistrict, setSelectedDistrict] = useState<DistrictProperties | null>(null);
 
   // Dynamic Weather Location (Updates on GPS detect & when user searches any place in India like Mumbai/Kurla)
   const [weatherLocation, setWeatherLocation] = useState<{
@@ -42,7 +62,50 @@ export default function Home() {
     error: null,
   });
 
-  // Auto-detect user GPS on initial load to show user's live city & weather across India
+  // Level 2: Fetch 1,200+ Marker records from typed Next.js API route (/api/markers)
+  useEffect(() => {
+    fetch("/api/markers")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load markers");
+        return res.json();
+      })
+      .then((data) => {
+        if (data && data.markers) {
+          setAllMarkers(data.markers);
+          setFilteredMarkers(data.markers);
+          const counts: Record<string, number> = {};
+          if (data.categories) {
+            data.categories.forEach((c: { id: string; count: number }) => {
+              counts[c.id] = c.count;
+            });
+          }
+          setCategoryCounts(counts);
+        }
+      })
+      .catch((err) => {
+        console.error("Markers API error:", err);
+      });
+  }, []);
+
+  // Level 2: Bi-directional filtering on Category and Search Query
+  useEffect(() => {
+    let result = allMarkers;
+    if (sidebarCategory !== "all") {
+      result = result.filter((m) => m.category === sidebarCategory);
+    }
+    if (sidebarSearch.trim()) {
+      const q = sidebarSearch.toLowerCase();
+      result = result.filter(
+        (m) =>
+          m.name.toLowerCase().includes(q) ||
+          m.hub?.toLowerCase().includes(q) ||
+          m.address?.toLowerCase().includes(q)
+      );
+    }
+    setFilteredMarkers(result);
+  }, [allMarkers, sidebarCategory, sidebarSearch]);
+
+  // Auto-detect user GPS on initial load
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -55,10 +118,10 @@ export default function Home() {
             error: null,
           });
 
-          // Instantly fly map to user's real live GPS location (e.g. Bhopal, Mumbai, Delhi)
+          // Instantly fly map to user's real live GPS location
           setFlyToCoords(coords);
 
-          // Reverse geocode via OpenStreetMap to detect user's live city name across India
+          // Reverse geocode via OpenStreetMap to detect user's live city name
           try {
             const res = await fetch(
               `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords[0]}&lon=${coords[1]}`
@@ -227,13 +290,22 @@ export default function Home() {
     setSelectedLandmark(landmark);
     if (landmark) {
       setFlyToCoords(landmark.coordinates);
-      // Immediately update live weather for this searched/selected place across India (e.g. Mumbai, Kurla)
       const cleanName = landmark.name.split(",")[0].trim();
       setWeatherLocation({
         coords: landmark.coordinates,
         name: cleanName,
       });
     }
+  };
+
+  // Level 2: Bi-directional selection from Sidebar to Map and vice-versa
+  const handleSelectClusterMarker = (marker: MarkerPoi) => {
+    setSelectedClusterMarker(marker);
+    setFlyToCoords(marker.coordinates);
+    setWeatherLocation({
+      coords: marker.coordinates,
+      name: marker.name,
+    });
   };
 
   return (
@@ -246,6 +318,11 @@ export default function Home() {
         onToggleMenu={() => setIsDrawerOpen(true)}
         onOpenAi={() => setIsAskMapsOpen(true)}
         weatherLocation={weatherLocation}
+        showDistricts={showDistrictsGeoJson}
+        onToggleDistricts={() => setShowDistrictsGeoJson((prev) => !prev)}
+        showPlacesExplorer={isPlacesExplorerOpen}
+        onTogglePlacesExplorer={() => setIsPlacesExplorerOpen((prev) => !prev)}
+        totalMarkersCount={allMarkers.length || 1200}
       />
 
       {/* Top-Right Dynamic Weather & Air Quality Widget (Desktop View only) */}
@@ -257,6 +334,31 @@ export default function Home() {
         />
       </div>
 
+      {/* Level 2: Delhi 11 Districts Choropleth Legend & District Card */}
+      <ChoroplethLegend
+        visible={showDistrictsGeoJson}
+        activeMetric={activeChoroplethMetric}
+        selectedDistrict={selectedDistrict}
+        onCloseDistrict={() => setSelectedDistrict(null)}
+        onChangeMetric={setActiveChoroplethMetric}
+        onToggleVisible={() => setShowDistrictsGeoJson(false)}
+      />
+
+      {/* Level 2: Places Explorer Sidebar (1,200 Markers with Bi-directional Sync) */}
+      <Sidebar
+        markers={filteredMarkers}
+        selectedMarkerId={selectedClusterMarker?.id || null}
+        onSelectMarker={handleSelectClusterMarker}
+        isOpen={isPlacesExplorerOpen}
+        onClose={() => setIsPlacesExplorerOpen(false)}
+        selectedCategory={sidebarCategory}
+        onSelectCategory={setSidebarCategory}
+        searchQuery={sidebarSearch}
+        onSearchChange={setSidebarSearch}
+        totalCount={allMarkers.length || 1200}
+        categoryCounts={categoryCounts}
+      />
+
       {/* Hamburger Navigation Drawer */}
       <GoogleMapsDrawer
         isOpen={isDrawerOpen}
@@ -266,6 +368,12 @@ export default function Home() {
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
         onOpenAskMaps={() => setIsAskMapsOpen(true)}
+        showDistricts={showDistrictsGeoJson}
+        onToggleDistricts={() => setShowDistrictsGeoJson((prev) => !prev)}
+        showMarkerClusters={showMarkerClusters}
+        onToggleMarkerClusters={() => setShowMarkerClusters((prev) => !prev)}
+        onOpenPlacesExplorer={() => setIsPlacesExplorerOpen(true)}
+        totalMarkersCount={allMarkers.length || 1200}
       />
 
       {/* Dedicated Delhi Explorer AI Panel */}
@@ -302,6 +410,13 @@ export default function Home() {
           userLocation={userLocation}
           onLocateUser={handleLocateUser}
           isDarkMode={isDarkMode}
+          showDistricts={showDistrictsGeoJson}
+          activeChoroplethMetric={activeChoroplethMetric}
+          onSelectDistrict={setSelectedDistrict}
+          showMarkerClusters={showMarkerClusters}
+          clusterMarkers={filteredMarkers}
+          selectedClusterMarkerId={selectedClusterMarker?.id || null}
+          onSelectClusterMarker={handleSelectClusterMarker}
         />
       </main>
     </div>
