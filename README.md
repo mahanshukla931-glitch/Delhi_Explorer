@@ -36,6 +36,24 @@ A production-grade geospatial interactive map application focused on the Nationa
 
 ---
 
+## 🌟 Architecture & Levels Overview
+
+### Level 1: Map Fundamentals & Responsive Dashboard
+- Interactive Leaflet map with multi-layer tiles (Street, Satellite, Terrain, Dark Mode).
+- Nominatim geocoding search with debounce, voice mic input, and Wikipedia place cards.
+- Live Open-Meteo weather and air quality monitoring with auto GPS detection.
+- PWA offline caching with service worker and installable app manifest.
+- AI Copilot assistant modal with multi-modal quick guides.
+
+### Level 2: Geographic Data & Marker Management
+- **Delhi 11 Districts GeoJSON Choropleth**: Renders administrative boundaries with 3 selectable demographic metrics (Population Density, Total Population, Literacy Rate), dynamic hover effects, and district metadata cards.
+- **Interactive Choropleth Legend**: Real-time metric toggle tabs with color swatches and responsive placement.
+- **Typed Markers API (`/api/markers`)**: Next.js App Router route serving 1,200+ POIs with category filtering, query search, and pagination.
+- **High-Performance Marker Clustering**: `leaflet.markercluster` integration with chunked loading, custom count bubbles, and rich Google Maps styled popups.
+- **Bi-directional Synchronization**: Real-time two-way sync between the Places Explorer sidebar and map markers (flying to marker, opening popup, highlighting sidebar card, and synchronized category filters).
+
+---
+
 ## 📡 Free Services Used & Usage Limits
 
 All external data and services used in this project are 100% free and require zero paid API keys:
