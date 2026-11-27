@@ -24,6 +24,7 @@ interface MapControlsOverlayProps {
   mapZoom: number;
   centerCoords: [number, number];
   cursorCoords?: [number, number] | null;
+  onOpenShare?: (data: { title: string; url: string; description?: string }) => void;
 }
 
 export function MapControlsOverlay({
@@ -34,6 +35,7 @@ export function MapControlsOverlay({
   mapZoom,
   centerCoords,
   cursorCoords,
+  onOpenShare,
 }: MapControlsOverlayProps) {
   const map = useMap();
   const [showLayerMenu, setShowLayerMenu] = useState(false);
@@ -70,6 +72,15 @@ export function MapControlsOverlay({
   const handleShareView = () => {
     if (typeof window === "undefined") return;
     const shareUrl = `${window.location.origin}${window.location.pathname}?lat=${centerCoords[0].toFixed(4)}&lng=${centerCoords[1].toFixed(4)}&z=${mapZoom}&layer=${activeLayer}`;
+
+    if (onOpenShare) {
+      onOpenShare({
+        title: "Delhi Explorer Live Map View",
+        url: shareUrl,
+        description: `Coordinates: ${centerCoords[0].toFixed(4)}°N, ${centerCoords[1].toFixed(4)}°E (Zoom: ${mapZoom})`,
+      });
+      return;
+    }
 
     if (navigator.clipboard) {
       navigator.clipboard

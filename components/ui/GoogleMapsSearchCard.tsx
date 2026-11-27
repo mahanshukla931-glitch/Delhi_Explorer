@@ -18,6 +18,7 @@ import {
   Bookmark,
   Star,
   MapPin,
+  Share2,
 } from "lucide-react";
 import { DELHI_PRIMARY_LANDMARKS } from "@/lib/constants";
 import { LandmarkLocation } from "@/types/map";
@@ -39,6 +40,7 @@ interface GoogleMapsSearchCardProps {
   showPlacesExplorer?: boolean;
   onTogglePlacesExplorer?: () => void;
   totalMarkersCount?: number;
+  onOpenShare?: (data: { title: string; url: string; description?: string }) => void;
 }
 
 interface SearchResultItem {
@@ -78,6 +80,7 @@ export function GoogleMapsSearchCard({
   onToggleDistricts,
   showPlacesExplorer,
   onTogglePlacesExplorer,
+  onOpenShare,
 }: GoogleMapsSearchCardProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("all");
@@ -522,6 +525,23 @@ export function GoogleMapsSearchCard({
                 </span>
                 <div className="flex items-center gap-1.5">
                   <button
+                    onClick={() => {
+                      if (typeof window === "undefined") return;
+                      const shareUrl = `${window.location.origin}${window.location.pathname}?place=${selectedLandmark.id}&lat=${selectedLandmark.coordinates[0]}&lng=${selectedLandmark.coordinates[1]}&z=16`;
+                      if (onOpenShare) {
+                        onOpenShare({
+                          title: selectedLandmark.name,
+                          url: shareUrl,
+                          description: selectedLandmark.description,
+                        });
+                      }
+                    }}
+                    className="p-1.5 rounded-full backdrop-blur-md transition-all shadow-md bg-black/50 hover:bg-black/70 text-white"
+                    title="Share on WhatsApp or Link"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
                     onClick={() => toggleLandmarkSaved(selectedLandmark.id)}
                     className={`p-1.5 rounded-full backdrop-blur-md transition-all shadow-md ${
                       isLandmarkSaved(selectedLandmark.id)
@@ -572,6 +592,23 @@ export function GoogleMapsSearchCard({
                   {selectedLandmark.category}
                 </span>
                 <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      if (typeof window === "undefined") return;
+                      const shareUrl = `${window.location.origin}${window.location.pathname}?place=${selectedLandmark.id}&lat=${selectedLandmark.coordinates[0]}&lng=${selectedLandmark.coordinates[1]}&z=16`;
+                      if (onOpenShare) {
+                        onOpenShare({
+                          title: selectedLandmark.name,
+                          url: shareUrl,
+                          description: selectedLandmark.description,
+                        });
+                      }
+                    }}
+                    className="p-1.5 rounded-full backdrop-blur-md transition-all shadow-md bg-black/40 hover:bg-black/60 text-white"
+                    title="Share on WhatsApp or Link"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                  </button>
                   <button
                     onClick={() => toggleLandmarkSaved(selectedLandmark.id)}
                     className={`p-1.5 rounded-full backdrop-blur-md transition-all ${

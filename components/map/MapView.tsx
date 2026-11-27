@@ -50,6 +50,7 @@ interface MapViewProps {
   clusterMarkers?: MarkerPoi[];
   selectedClusterMarkerId?: string | null;
   onSelectClusterMarker?: (marker: MarkerPoi) => void;
+  onOpenShare?: (data: { title: string; url: string; description?: string }) => void;
 }
 
 export default function MapView({
@@ -68,6 +69,7 @@ export default function MapView({
   clusterMarkers = [],
   selectedClusterMarkerId = null,
   onSelectClusterMarker,
+  onOpenShare,
 }: MapViewProps) {
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const [centerCoords, setCenterCoords] = useState<[number, number]>(DELHI_DEFAULT_CENTER);
@@ -147,6 +149,7 @@ export default function MapView({
           mapZoom={mapZoom}
           centerCoords={centerCoords}
           cursorCoords={cursorCoords}
+          onOpenShare={onOpenShare}
         />
       </MapContainer>
     </div>

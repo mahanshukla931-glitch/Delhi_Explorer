@@ -10,6 +10,7 @@ import { MapLoadingSkeleton } from "@/components/ui/MapLoadingSkeleton";
 import { MapErrorBoundary } from "@/components/ui/MapErrorBoundary";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { ChoroplethLegend } from "@/components/ui/ChoroplethLegend";
+import { ShareModal } from "@/components/ui/ShareModal";
 import { LayerType, LandmarkLocation, UserLocationState } from "@/types/map";
 import { DistrictProperties, MarkerPoi } from "@/types/geojson";
 import { DELHI_PRIMARY_LANDMARKS } from "@/lib/constants";
@@ -48,6 +49,27 @@ export default function Home() {
     "density" | "population" | "literacyRate" | "areaKm2"
   >("density");
   const [selectedDistrict, setSelectedDistrict] = useState<DistrictProperties | null>(null);
+
+  // 1-Click WhatsApp & Web Share State
+  const [shareModalData, setShareModalData] = useState<{
+    isOpen: boolean;
+    title: string;
+    url: string;
+    description?: string;
+  }>({
+    isOpen: false,
+    title: "Delhi Explorer",
+    url: "",
+  });
+
+  const handleOpenShare = (data: { title: string; url: string; description?: string }) => {
+    setShareModalData({
+      isOpen: true,
+      title: data.title,
+      url: data.url,
+      description: data.description,
+    });
+  };
 
   // Dynamic Weather Location (Updates on GPS detect & when user searches any place in India like Mumbai/Kurla)
   const [weatherLocation, setWeatherLocation] = useState<{
@@ -153,6 +175,10 @@ export default function Home() {
   // Auto-detect user GPS on initial load
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hasSharedLocation =
+        searchParams.has("lat") || searchParams.has("place") || searchParams.has("poi");
+
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
           const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
@@ -163,8 +189,10 @@ export default function Home() {
             error: null,
           });
 
-          // Instantly fly map to user's real live GPS location
-          setFlyToCoords(coords);
+          // Only fly to GPS if user did NOT arrive via a shared link/place!
+          if (!hasSharedLocation) {
+            setFlyToCoords(coords);
+          }
 
           // Reverse geocode via OpenStreetMap to detect user's live city name
           try {
@@ -181,20 +209,25 @@ export default function Home() {
                 data.address?.state ||
                 "My Location";
 
-              setWeatherLocation({
-                coords,
-                name: detectedCity,
-              });
+              // Keep shared location name if arriving via shared place
+              if (!hasSharedLocation) {
+                setWeatherLocation({
+                  coords,
+                  name: detectedCity,
+                });
+              }
               return;
             }
           } catch {
             // fallback
           }
 
-          setWeatherLocation({
-            coords,
-            name: "My Location",
-          });
+          if (!hasSharedLocation) {
+            setWeatherLocation({
+              coords,
+              name: "My Location",
+            });
+          }
         },
         () => {
           // If permission not granted, stay on Delhi default
@@ -204,7 +237,7 @@ export default function Home() {
     }
   }, []);
 
-  // Restore Map state from URL query parameters (1-click shared links)
+  // Restore Map state from URL query parameters (1-click shared links & WhatsApp deep links)
   useEffect(() => {
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
@@ -212,6 +245,7 @@ export default function Home() {
       const lng = parseFloat(searchParams.get("lng") || "");
       const layer = searchParams.get("layer");
       const placeId = searchParams.get("place");
+      const poiId = searchParams.get("poi");
 
       if (layer === "osm" || layer === "satellite" || layer === "dark" || layer === "terrain") {
         setActiveLayer(layer as LayerType);
@@ -230,11 +264,24 @@ export default function Home() {
         }
       }
 
+      if (poiId && allMarkers.length > 0) {
+        const foundPoi = allMarkers.find((m) => m.id === poiId);
+        if (foundPoi) {
+          setSelectedClusterMarker(foundPoi);
+          setFlyToCoords(foundPoi.coordinates);
+          setWeatherLocation({
+            coords: foundPoi.coordinates,
+            name: foundPoi.name,
+          });
+          return;
+        }
+      }
+
       if (!isNaN(lat) && !isNaN(lng)) {
         setFlyToCoords([lat, lng]);
       }
     }
-  }, []);
+  }, [allMarkers]);
 
   // Handle Geolocation with comprehensive error fallbacks
   const handleLocateUser = useCallback(() => {
@@ -368,6 +415,7 @@ export default function Home() {
         showPlacesExplorer={isPlacesExplorerOpen}
         onTogglePlacesExplorer={() => setIsPlacesExplorerOpen((prev) => !prev)}
         totalMarkersCount={allMarkers.length || 1200}
+        onOpenShare={handleOpenShare}
       />
 
       {/* Top-Right Dynamic Weather & Air Quality Widget (Desktop View only) */}
@@ -493,9 +541,19 @@ export default function Home() {
             clusterMarkers={filteredMarkers}
             selectedClusterMarkerId={selectedClusterMarker?.id || null}
             onSelectClusterMarker={handleSelectClusterMarker}
+            onOpenShare={handleOpenShare}
           />
         </MapErrorBoundary>
       </main>
+
+      {/* 1-Click WhatsApp & Web Share Modal */}
+      <ShareModal
+        isOpen={shareModalData.isOpen}
+        onClose={() => setShareModalData((prev) => ({ ...prev, isOpen: false }))}
+        title={shareModalData.title}
+        shareUrl={shareModalData.url}
+        description={shareModalData.description}
+      />
     </div>
   );
 }
