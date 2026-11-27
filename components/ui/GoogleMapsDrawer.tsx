@@ -34,6 +34,9 @@ interface GoogleMapsDrawerProps {
   onToggleMetroLines?: () => void;
   onOpenPlacesExplorer?: () => void;
   totalMarkersCount?: number;
+  showDrawTools?: boolean;
+  onToggleDrawTools?: () => void;
+  onOpenNearby?: () => void;
 }
 
 export function GoogleMapsDrawer({
@@ -52,6 +55,9 @@ export function GoogleMapsDrawer({
   onToggleMetroLines,
   onOpenPlacesExplorer,
   totalMarkersCount = 1200,
+  showDrawTools = false,
+  onToggleDrawTools,
+  onOpenNearby,
 }: GoogleMapsDrawerProps) {
   const [savedCount, setSavedCount] = useState(0);
 
@@ -324,6 +330,61 @@ export function GoogleMapsDrawer({
                   <div className="w-5 h-5 rounded-full bg-white shadow-xs" />
                 </button>
               </div>
+            )}
+
+            {/* Level 3: Drawing Tools & Measurement Switch */}
+            {onToggleDrawTools && (
+              <div className="p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shadow-2xs text-sm">
+                    ✏️
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block leading-tight">
+                      Drawing & Measurements
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      Polygons, Lines, Area & Distance
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={onToggleDrawTools}
+                  className={`w-11 h-6 flex items-center rounded-full p-0.5 cursor-pointer transition-colors ${
+                    showDrawTools ? "bg-purple-600 justify-end" : "bg-slate-300 dark:bg-slate-600 justify-start"
+                  }`}
+                  aria-label="Toggle Drawing Tools"
+                >
+                  <div className="w-5 h-5 rounded-full bg-white shadow-xs" />
+                </button>
+              </div>
+            )}
+
+            {/* Level 3: Overpass Nearby Search */}
+            {onOpenNearby && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenNearby();
+                }}
+                className="w-full p-3 flex items-center justify-between text-left hover:bg-white dark:hover:bg-slate-800/60 transition-colors group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center shadow-2xs text-sm">
+                    🔍
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block leading-tight">
+                      Find Nearby (Overpass API)
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      Cafés, ATMs, Hospitals, Fuel & more
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
+              </button>
             )}
 
             {/* Level 2: Places Explorer (1,200 Markers) */}

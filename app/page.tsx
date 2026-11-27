@@ -13,6 +13,8 @@ import { ChoroplethLegend } from "@/components/ui/ChoroplethLegend";
 import { ShareModal } from "@/components/ui/ShareModal";
 import { MobileBottomBar } from "@/components/ui/MobileBottomBar";
 import { DirectionsDrawer } from "@/components/ui/DirectionsDrawer";
+import { NearbyPlacesDrawer } from "@/components/ui/NearbyPlacesDrawer";
+import { NearbyPlaceItem } from "@/components/map/NearbyMarkersLayer";
 import { MetroStation } from "@/lib/metroData";
 import { RouteData, TravelMode } from "@/types/routing";
 import { LayerType, LandmarkLocation, UserLocationState } from "@/types/map";
@@ -61,6 +63,18 @@ export default function Home() {
   const [activeRoute, setActiveRoute] = useState<RouteData | null>(null);
   const [isDirectionsDrawerOpen, setIsDirectionsDrawerOpen] = useState(false);
   const [isRoutingLoading, setIsRoutingLoading] = useState(false);
+
+  // Level 3: Drawing & Measurement Tools State
+  const [showDrawTools, setShowDrawTools] = useState(false);
+
+  // Level 3: Overpass Nearby Search State
+  const [isNearbyDrawerOpen, setIsNearbyDrawerOpen] = useState(false);
+  const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlaceItem[]>([]);
+  const [isNearbyLoading, setIsNearbyLoading] = useState(false);
+  const [nearbyError, setNearbyError] = useState<string | null>(null);
+  const [nearbyCategory, setNearbyCategory] = useState("cafe");
+  const [nearbyRadius, setNearbyRadius] = useState(1000);
+  const [currentMapCenter, setCurrentMapCenter] = useState<[number, number]>([28.6139, 77.209]);
 
   // 1-Click WhatsApp & Web Share State
   const [shareModalData, setShareModalData] = useState<{
@@ -460,6 +474,42 @@ export default function Home() {
     }
   };
 
+  // Level 3: Overpass API Find Nearby Handler
+  const handleSearchNearby = async (
+    category: string,
+    radius: number,
+    customCenter?: [number, number]
+  ) => {
+    try {
+      setIsNearbyLoading(true);
+      setNearbyError(null);
+      const center = customCenter || currentMapCenter;
+
+      const res = await fetch(
+        `/api/nearby?lat=${center[0]}&lng=${center[1]}&radius=${radius}&category=${category}`
+      );
+
+      if (!res.ok) {
+        throw new Error("Failed to scan nearby places");
+      }
+
+      const data = await res.json();
+      if (data.elements) {
+        setNearbyPlaces(data.elements);
+        if (data.elements.length === 0) {
+          setErrorNotice(
+            `No ${category}s found within ${radius >= 1000 ? `${radius / 1000} km` : `${radius} m`}. Try increasing the radius.`
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Nearby search error:", err);
+      setNearbyError("Overpass API is currently busy or rate-limited. Please retry shortly.");
+    } finally {
+      setIsNearbyLoading(false);
+    }
+  };
+
   return (
     <div className="relative w-screen h-screen overflow-hidden select-none bg-slate-100 dark:bg-[#1f1f1f]">
       {/* Top-Left Floating Google Maps Search Card */}
@@ -479,6 +529,10 @@ export default function Home() {
         totalMarkersCount={allMarkers.length || 1200}
         onOpenShare={handleOpenShare}
         onRequestDirections={(coords, name) => handleCalculateRoute(coords, name)}
+        showDrawTools={showDrawTools}
+        onToggleDrawTools={() => setShowDrawTools((prev) => !prev)}
+        onToggleNearbyPlaces={() => setIsNearbyDrawerOpen((prev) => !prev)}
+        isNearbyActive={isNearbyDrawerOpen || nearbyPlaces.length > 0}
       />
 
       {/* Top-Right Dynamic Weather & Air Quality Widget (Desktop View only) */}
@@ -540,6 +594,9 @@ export default function Home() {
         onToggleMetroLines={() => setShowMetroLines((prev) => !prev)}
         onOpenPlacesExplorer={() => setIsPlacesExplorerOpen(true)}
         totalMarkersCount={allMarkers.length || 1200}
+        showDrawTools={showDrawTools}
+        onToggleDrawTools={() => setShowDrawTools((prev) => !prev)}
+        onOpenNearby={() => setIsNearbyDrawerOpen(true)}
       />
 
       {/* Dedicated Delhi Explorer AI Panel */}
@@ -616,9 +673,37 @@ export default function Home() {
               setActiveRoute(null);
               setIsDirectionsDrawerOpen(false);
             }}
+            showDrawTools={showDrawTools}
+            nearbyPlaces={nearbyPlaces}
+            onSelectNearbyPlace={(p) => setFlyToCoords(p.coordinates)}
+            onRequestDirections={(coords, name) => handleCalculateRoute(coords, name)}
+            onFindNearbyHere={(coords) => {
+              setCurrentMapCenter(coords);
+              setIsNearbyDrawerOpen(true);
+              handleSearchNearby(nearbyCategory, nearbyRadius, coords);
+            }}
+            onMapCenterChange={(center) => setCurrentMapCenter(center)}
           />
         </MapErrorBoundary>
       </main>
+
+      {/* Level 3: Overpass API Find Nearby Drawer */}
+      <NearbyPlacesDrawer
+        isOpen={isNearbyDrawerOpen}
+        onClose={() => setIsNearbyDrawerOpen(false)}
+        centerCoords={currentMapCenter}
+        onSearchNearby={(cat, rad) => handleSearchNearby(cat, rad)}
+        isLoading={isNearbyLoading}
+        places={nearbyPlaces}
+        error={nearbyError}
+        onSelectPlace={(p) => setFlyToCoords(p.coordinates)}
+        onRequestDirections={(coords, name) => handleCalculateRoute(coords, name)}
+        onClearPlaces={() => setNearbyPlaces([])}
+        activeCategory={nearbyCategory}
+        setActiveCategory={setNearbyCategory}
+        activeRadius={nearbyRadius}
+        setActiveRadius={setNearbyRadius}
+      />
 
       {/* Level 3: Turn-by-Turn Navigation & Routing Drawer */}
       <DirectionsDrawer

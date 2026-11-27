@@ -22,6 +22,9 @@ import { DelhiDistrictsGeoJson } from "./DelhiDistrictsGeoJson";
 import { MarkerClusterLayer } from "./MarkerClusterLayer";
 import { DelhiMetroLayer } from "./DelhiMetroLayer";
 import { MapRouteLayer } from "./MapRouteLayer";
+import { GeomanDrawLayer } from "./GeomanDrawLayer";
+import { ReverseGeocodingHandler } from "./ReverseGeocodingHandler";
+import { NearbyMarkersLayer, NearbyPlaceItem } from "./NearbyMarkersLayer";
 import { MetroStation } from "@/lib/metroData";
 import { RouteData } from "@/types/routing";
 
@@ -57,8 +60,15 @@ interface MapViewProps {
   showMetroLines?: boolean;
   onSelectMetroStation?: (station: MetroStation) => void;
   onOpenShare?: (data: { title: string; url: string; description?: string }) => void;
+  // Level 3 Additions:
   activeRoute?: RouteData | null;
   onClearRoute?: () => void;
+  showDrawTools?: boolean;
+  nearbyPlaces?: NearbyPlaceItem[];
+  onSelectNearbyPlace?: (place: NearbyPlaceItem) => void;
+  onRequestDirections?: (coords: [number, number], name: string) => void;
+  onFindNearbyHere?: (coords: [number, number]) => void;
+  onMapCenterChange?: (center: [number, number]) => void;
 }
 
 export default function MapView({
@@ -82,6 +92,12 @@ export default function MapView({
   onOpenShare,
   activeRoute = null,
   onClearRoute,
+  showDrawTools = false,
+  nearbyPlaces = [],
+  onSelectNearbyPlace,
+  onRequestDirections,
+  onFindNearbyHere,
+  onMapCenterChange,
 }: MapViewProps) {
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const [centerCoords, setCenterCoords] = useState<[number, number]>(DELHI_DEFAULT_CENTER);
@@ -115,6 +131,7 @@ export default function MapView({
           onMoveEnd={(center, zoom) => {
             setCenterCoords(center);
             setMapZoom(zoom);
+            onMapCenterChange?.(center);
           }}
           onMouseMove={(coords) => {
             setCursorCoords(coords);
@@ -137,7 +154,26 @@ export default function MapView({
           onSelectStation={(station) => onSelectMetroStation?.(station)}
         />
 
-        {/* Level 3: Navigation Route Polyline Layer */}
+        {/* Level 3: Geoman Drawing & Measurement Layer (Draw polygon, polyline, circle, marker; measure area/distance; persist to LocalStorage) */}
+        <GeomanDrawLayer enabled={showDrawTools} />
+
+        {/* Level 3: Reverse Geocoding Map Click Handler (Click map -> address popup with Navigate & Nearby) */}
+        <ReverseGeocodingHandler
+          enabled={!showDrawTools}
+          onRequestDirections={onRequestDirections}
+          onFindNearbyHere={onFindNearbyHere}
+        />
+
+        {/* Level 3: Overpass API Nearby POIs Layer (Café, ATM, Hospital, Restaurant, etc.) */}
+        {nearbyPlaces && nearbyPlaces.length > 0 && (
+          <NearbyMarkersLayer
+            places={nearbyPlaces}
+            onSelectPlace={(p) => onSelectNearbyPlace?.(p)}
+            onRequestDirections={onRequestDirections}
+          />
+        )}
+
+        {/* Level 3: Navigation Route Polyline Layer (OSRM Driving, Walking, Cycling) */}
         {activeRoute && (
           <MapRouteLayer
             route={activeRoute}

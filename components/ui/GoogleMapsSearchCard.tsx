@@ -44,6 +44,10 @@ interface GoogleMapsSearchCardProps {
   totalMarkersCount?: number;
   onOpenShare?: (data: { title: string; url: string; description?: string }) => void;
   onRequestDirections?: (coords: [number, number], name: string) => void;
+  showDrawTools?: boolean;
+  onToggleDrawTools?: () => void;
+  onToggleNearbyPlaces?: () => void;
+  isNearbyActive?: boolean;
 }
 
 interface SearchResultItem {
@@ -87,6 +91,10 @@ export function GoogleMapsSearchCard({
   onTogglePlacesExplorer,
   onOpenShare,
   onRequestDirections,
+  showDrawTools,
+  onToggleDrawTools,
+  onToggleNearbyPlaces,
+  isNearbyActive,
 }: GoogleMapsSearchCardProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("all");
@@ -223,7 +231,7 @@ export function GoogleMapsSearchCard({
       } finally {
         setIsLoading(false);
       }
-    }, 400);
+    }, 1000); // Debounce to strictly adhere to Nominatim <= 1 req/sec limit
 
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
@@ -486,6 +494,36 @@ export function GoogleMapsSearchCard({
           >
             <span>🏛️</span>
             <span>Districts</span>
+          </button>
+        )}
+
+        {/* 4. Level 3: Geoman Drawing & Measurement Tools Chip */}
+        {onToggleDrawTools && (
+          <button
+            onClick={onToggleDrawTools}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
+              showDrawTools
+                ? "bg-purple-600 text-white ring-2 ring-purple-400/40"
+                : "bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <span>✏️</span>
+            <span>Draw & Measure</span>
+          </button>
+        )}
+
+        {/* 5. Level 3: Overpass API Find Nearby Chip */}
+        {onToggleNearbyPlaces && (
+          <button
+            onClick={onToggleNearbyPlaces}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
+              isNearbyActive
+                ? "bg-emerald-600 text-white ring-2 ring-emerald-400/40"
+                : "bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <span>🔍</span>
+            <span>Find Nearby</span>
           </button>
         )}
 

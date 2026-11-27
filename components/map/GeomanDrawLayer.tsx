@@ -1,0 +1,296 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
+"use client";
+
+import { useEffect, useRef } from "react";
+import { useMap } from "react-leaflet";
+import L from "leaflet";
+import "@geoman-io/leaflet-geoman-free";
+import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
+import {
+  StoredShape,
+  loadSavedShapes,
+  saveShape,
+  deleteShape,
+} from "@/lib/shapesStorage";
+
+// Geodesic Area Calculation for Polygons (Spherical Excess formula)
+function computePolygonArea(latLngs: L.LatLng[]): number {
+  const RADIUS = 6378137; // Earth radius in meters
+  if (latLngs.length < 3) return 0;
+  let total = 0;
+
+  for (let i = 0; i < latLngs.length; i++) {
+    const p1 = latLngs[i];
+    const p2 = latLngs[(i + 1) % latLngs.length];
+    const rad1 = (p1.lat * Math.PI) / 180;
+    const rad2 = (p2.lat * Math.PI) / 180;
+    const dLng = ((p2.lng - p1.lng) * Math.PI) / 180;
+    total += dLng * (2 + Math.sin(rad1) + Math.sin(rad2));
+  }
+
+  return Math.abs((total * RADIUS * RADIUS) / 2);
+}
+
+// Distance Calculation for Polylines
+function computeLineDistance(latLngs: L.LatLng[]): number {
+  let total = 0;
+  for (let i = 0; i < latLngs.length - 1; i++) {
+    total += latLngs[i].distanceTo(latLngs[i + 1]);
+  }
+  return total;
+}
+
+export function GeomanDrawLayer({ enabled = true }: { enabled?: boolean }) {
+  const map = useMap();
+  const drawnLayersRef = useRef<Map<string, L.Layer>>(new Map());
+
+  // Attach shape popup with formatted measurement and Delete action
+  const attachShapePopup = (layer: any, shape: StoredShape) => {
+    let measurementText = "";
+    if (shape.measurements?.areaText) {
+      measurementText += `<div style="display:flex; justify-content:space-between; margin-bottom:2px;"><span>📐 Area:</span><b style="color:#0f172a">${shape.measurements.areaText}</b></div>`;
+    }
+    if (shape.measurements?.distanceText) {
+      measurementText += `<div style="display:flex; justify-content:space-between; margin-bottom:2px;"><span>📏 Length:</span><b style="color:#0f172a">${shape.measurements.distanceText}</b></div>`;
+    }
+    if (shape.measurements?.radiusMeters) {
+      measurementText += `<div style="display:flex; justify-content:space-between; margin-bottom:2px;"><span>⭕ Radius:</span><b style="color:#0f172a">${shape.measurements.radiusMeters} m</b></div>`;
+    }
+
+    const popupHtml = `
+      <div style="font-family: system-ui, -apple-system, sans-serif; min-width: 180px; padding: 4px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+          <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #2563eb; letter-spacing: 0.5px;">
+            ${shape.type}
+          </span>
+          <span style="font-size: 10px; color: #64748b;">Saved</span>
+        </div>
+        <div style="font-size: 11.5px; line-height: 1.4; color: #334155; margin-bottom: 8px;">
+          ${measurementText || "Drawn Shape"}
+        </div>
+        <button id="del-shape-${shape.id}" style="width: 100%; padding: 5px 8px; background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; transition: background 0.15s;">
+          🗑️ Delete Shape
+        </button>
+      </div>
+    `;
+
+    layer.bindPopup(popupHtml);
+    layer.on("popupopen", () => {
+      const btn = document.getElementById(`del-shape-${shape.id}`);
+      if (btn) {
+        btn.onclick = () => {
+          deleteShape(shape.id);
+          map.removeLayer(layer);
+          drawnLayersRef.current.delete(shape.id);
+        };
+      }
+    });
+  };
+
+  // 1. Initial Load of Saved Shapes from LocalStorage (survives page refresh)
+  useEffect(() => {
+    if (!map) return;
+
+    // Clear any previous references
+    drawnLayersRef.current.forEach((layer) => {
+      try {
+        map.removeLayer(layer);
+      } catch {}
+    });
+    drawnLayersRef.current.clear();
+
+    const existingShapes = loadSavedShapes();
+    existingShapes.forEach((s) => {
+      try {
+        let l: any;
+        if (s.type === "marker") {
+          l = L.marker(s.coordinates as [number, number]);
+        } else if (s.type === "circle") {
+          const c = s.coordinates as { center: [number, number]; radius: number };
+          l = L.circle(c.center, {
+            radius: c.radius,
+            color: "#3b82f6",
+            fillColor: "#60a5fa",
+            fillOpacity: 0.25,
+          });
+        } else if (s.type === "polyline" || (s.type as string) === "line") {
+          l = L.polyline(s.coordinates as [number, number][], {
+            color: "#8b5cf6",
+            weight: 4,
+          });
+        } else if (s.type === "polygon" || s.type === "rectangle") {
+          l = L.polygon(s.coordinates as [number, number][], {
+            color: "#10b981",
+            fillColor: "#34d399",
+            fillOpacity: 0.25,
+            weight: 3,
+          });
+        }
+
+        if (l) {
+          l.addTo(map);
+          (l as any)._shapeId = s.id;
+          drawnLayersRef.current.set(s.id, l);
+          attachShapePopup(l, s);
+        }
+      } catch (err) {
+        console.error("Failed to render stored shape:", err);
+      }
+    });
+  }, [map]);
+
+  // 2. Toolbar controls and create/edit/delete event listeners
+  useEffect(() => {
+    if (!map || !(map as any).pm) return;
+
+    const pm = (map as any).pm;
+
+    if (enabled) {
+      pm.addControls({
+        position: "topleft",
+        drawMarker: true,
+        drawCircleMarker: false,
+        drawPolyline: true,
+        drawRectangle: true,
+        drawPolygon: true,
+        drawCircle: true,
+        editMode: true,
+        dragMode: true,
+        cutPolygon: false,
+        removalMode: true,
+      });
+    } else {
+      pm.removeControls();
+      return;
+    }
+
+    // Handle Create Shape Event
+    const handleCreate = (e: any) => {
+      const shapeType = e.shape?.toLowerCase();
+      const layer = e.layer;
+      const id = "shape-" + Date.now();
+      (layer as any)._shapeId = id;
+
+      let coords: any = null;
+      let measurements: any = {};
+
+      if (shapeType === "marker") {
+        coords = [layer.getLatLng().lat, layer.getLatLng().lng];
+      } else if (shapeType === "circle") {
+        const center = layer.getLatLng();
+        const radius = Math.round(layer.getRadius());
+        coords = { center: [center.lat, center.lng], radius };
+        const area = Math.round(Math.PI * radius * radius);
+        measurements = {
+          radiusMeters: radius,
+          areaMeters: area,
+          areaText: area > 1000000 ? `${(area / 1000000).toFixed(2)} km²` : `${area.toLocaleString()} m²`,
+        };
+      } else if (shapeType === "line" || shapeType === "polyline") {
+        const latLngs = layer.getLatLngs();
+        coords = latLngs.map((pt: any) => [pt.lat, pt.lng]);
+        const dist = Math.round(computeLineDistance(latLngs));
+        measurements = {
+          distanceMeters: dist,
+          distanceText: dist > 1000 ? `${(dist / 1000).toFixed(2)} km` : `${dist} m`,
+        };
+      } else if (shapeType === "polygon" || shapeType === "rectangle") {
+        const rawLatLngs = layer.getLatLngs();
+        const latLngs = Array.isArray(rawLatLngs[0]) ? rawLatLngs[0] : rawLatLngs;
+        coords = latLngs.map((pt: any) => [pt.lat, pt.lng]);
+        const area = Math.round(computePolygonArea(latLngs));
+        const dist = Math.round(computeLineDistance([...latLngs, latLngs[0]]));
+        measurements = {
+          areaMeters: area,
+          areaText: area > 1000000 ? `${(area / 1000000).toFixed(2)} km²` : `${area.toLocaleString()} m²`,
+          distanceMeters: dist,
+          distanceText: `Perimeter: ${dist > 1000 ? `${(dist / 1000).toFixed(2)} km` : `${dist} m`}`,
+        };
+      }
+
+      const stored: StoredShape = {
+        id,
+        type: shapeType,
+        coordinates: coords,
+        measurements,
+        createdAt: Date.now(),
+      };
+
+      saveShape(stored);
+      drawnLayersRef.current.set(id, layer);
+      attachShapePopup(layer, stored);
+    };
+
+    // Handle Edit Shape Event (Persistence)
+    const handleEdit = (e: any) => {
+      const layer = e.layer;
+      const id = (layer as any)._shapeId;
+      if (!id) return;
+
+      const existing = loadSavedShapes().find((s) => s.id === id);
+      if (!existing) return;
+
+      if (existing.type === "marker") {
+        existing.coordinates = [layer.getLatLng().lat, layer.getLatLng().lng];
+      } else if (existing.type === "circle") {
+        const radius = Math.round(layer.getRadius());
+        const center: [number, number] = [layer.getLatLng().lat, layer.getLatLng().lng];
+        existing.coordinates = { center, radius };
+        const area = Math.round(Math.PI * radius * radius);
+        existing.measurements = {
+          radiusMeters: radius,
+          areaMeters: area,
+          areaText: area > 1000000 ? `${(area / 1000000).toFixed(2)} km²` : `${area.toLocaleString()} m²`,
+        };
+      } else if (existing.type === "polyline" || existing.type === "line") {
+        const latLngs = layer.getLatLngs();
+        existing.coordinates = latLngs.map((pt: any) => [pt.lat, pt.lng]);
+        const dist = Math.round(computeLineDistance(latLngs));
+        existing.measurements = {
+          distanceMeters: dist,
+          distanceText: dist > 1000 ? `${(dist / 1000).toFixed(2)} km` : `${dist} m`,
+        };
+      } else if (existing.type === "polygon" || existing.type === "rectangle") {
+        const raw = layer.getLatLngs();
+        const latLngs = Array.isArray(raw[0]) ? raw[0] : raw;
+        existing.coordinates = latLngs.map((pt: any) => [pt.lat, pt.lng]);
+        const area = Math.round(computePolygonArea(latLngs));
+        const dist = Math.round(computeLineDistance([...latLngs, latLngs[0]]));
+        existing.measurements = {
+          areaMeters: area,
+          areaText: area > 1000000 ? `${(area / 1000000).toFixed(2)} km²` : `${area.toLocaleString()} m²`,
+          distanceMeters: dist,
+          distanceText: `Perimeter: ${dist > 1000 ? `${(dist / 1000).toFixed(2)} km` : `${dist} m`}`,
+        };
+      }
+
+      saveShape(existing);
+      attachShapePopup(layer, existing);
+    };
+
+    // Handle Remove Event
+    const handleRemove = (e: any) => {
+      const id = (e.layer as any)._shapeId;
+      if (id) {
+        deleteShape(id);
+        drawnLayersRef.current.delete(id);
+      }
+    };
+
+    map.on("pm:create", handleCreate);
+    map.on("pm:edit", handleEdit);
+    map.on("pm:remove", handleRemove);
+
+    return () => {
+      try {
+        map.off("pm:create", handleCreate);
+        map.off("pm:edit", handleEdit);
+        map.off("pm:remove", handleRemove);
+        pm.removeControls();
+      } catch {}
+    };
+  }, [map, enabled]);
+
+  return null;
+}
