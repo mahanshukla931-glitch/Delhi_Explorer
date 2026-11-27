@@ -1,0 +1,50 @@
+import { MetadataRoute } from "next";
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: "Delhi Explorer – Geospatial Map & AI Guide",
+    short_name: "Delhi Explorer",
+    description: "Explore Delhi & India with live interactive maps, landmark discovery, live weather, and AI Copilot guide.",
+    start_url: "/",
+    display: "standalone",
+    background_color: "#ffffff",
+    theme_color: "#2563eb",
+    orientation: "portrait-primary",
+    icons: [
+      {
+        src: "/brand/icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "maskable",
+      },
+      {
+        src: "/brand/icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/icon.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+    ],
+    shortcuts: [
+      {
+        name: "Ask AI Guide",
+        short_name: "Ask AI",
+        description: "Ask Delhi Explorer AI about landmarks, routes & places",
+        url: "/?action=ask-ai",
+        icons: [{ src: "/brand/icon-192.png", sizes: "192x192" }],
+      },
+      {
+        name: "Prominent Places",
+        short_name: "Places",
+        description: "Browse top landmarks and monuments",
+        url: "/?action=places",
+        icons: [{ src: "/brand/icon-192.png", sizes: "192x192" }],
+      },
+    ],
+    categories: ["travel", "navigation", "utilities"],
+  };
+}
