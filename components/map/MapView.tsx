@@ -20,6 +20,8 @@ import { MapControlsOverlay } from "./MapControlsOverlay";
 import { MapEventsHandler } from "./MapEventsHandler";
 import { DelhiDistrictsGeoJson } from "./DelhiDistrictsGeoJson";
 import { MarkerClusterLayer } from "./MarkerClusterLayer";
+import { DelhiMetroLayer } from "./DelhiMetroLayer";
+import { MetroStation } from "@/lib/metroData";
 
 // Fix default Leaflet marker icon asset paths
 delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
@@ -50,6 +52,8 @@ interface MapViewProps {
   clusterMarkers?: MarkerPoi[];
   selectedClusterMarkerId?: string | null;
   onSelectClusterMarker?: (marker: MarkerPoi) => void;
+  showMetroLines?: boolean;
+  onSelectMetroStation?: (station: MetroStation) => void;
   onOpenShare?: (data: { title: string; url: string; description?: string }) => void;
 }
 
@@ -69,6 +73,8 @@ export default function MapView({
   clusterMarkers = [],
   selectedClusterMarkerId = null,
   onSelectClusterMarker,
+  showMetroLines = true,
+  onSelectMetroStation,
   onOpenShare,
 }: MapViewProps) {
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
@@ -118,6 +124,12 @@ export default function MapView({
             isDarkMode={isDarkMode}
           />
         )}
+
+        {/* Delhi Metro Network Overlay */}
+        <DelhiMetroLayer
+          visible={showMetroLines}
+          onSelectStation={(station) => onSelectMetroStation?.(station)}
+        />
 
         {/* Level 2: 1,200+ Marker Clustering Layer */}
         {showMarkerClusters && clusterMarkers && clusterMarkers.length > 0 && (

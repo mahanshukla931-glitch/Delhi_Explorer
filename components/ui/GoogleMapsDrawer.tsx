@@ -30,6 +30,8 @@ interface GoogleMapsDrawerProps {
   onToggleDistricts?: () => void;
   showMarkerClusters?: boolean;
   onToggleMarkerClusters?: () => void;
+  showMetroLines?: boolean;
+  onToggleMetroLines?: () => void;
   onOpenPlacesExplorer?: () => void;
   totalMarkersCount?: number;
 }
@@ -46,6 +48,8 @@ export function GoogleMapsDrawer({
   onToggleDistricts,
   showMarkerClusters = true,
   onToggleMarkerClusters,
+  showMetroLines = true,
+  onToggleMetroLines,
   onOpenPlacesExplorer,
   totalMarkersCount = 1200,
 }: GoogleMapsDrawerProps) {
@@ -234,6 +238,35 @@ export function GoogleMapsDrawer({
                 <div className="w-5 h-5 rounded-full bg-white shadow-xs" />
               </button>
             </div>
+
+            {/* Delhi Metro Network Toggle */}
+            {onToggleMetroLines && (
+              <div className="p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-2xs text-sm">
+                    🚇
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block leading-tight">
+                      Delhi Metro Network
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      Lines, Interchanges & Stations
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={onToggleMetroLines}
+                  className={`w-11 h-6 flex items-center rounded-full p-0.5 cursor-pointer transition-colors ${
+                    showMetroLines ? "bg-amber-500 justify-end" : "bg-slate-300 dark:bg-slate-600 justify-start"
+                  }`}
+                  aria-label="Toggle Delhi Metro"
+                >
+                  <div className="w-5 h-5 rounded-full bg-white shadow-xs" />
+                </button>
+              </div>
+            )}
 
             {/* Level 2: Delhi 11 Districts Choropleth Toggle */}
             {onToggleDistricts && (

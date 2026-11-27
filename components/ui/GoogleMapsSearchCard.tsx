@@ -37,6 +37,8 @@ interface GoogleMapsSearchCardProps {
   };
   showDistricts?: boolean;
   onToggleDistricts?: () => void;
+  showMetroLines?: boolean;
+  onToggleMetroLines?: () => void;
   showPlacesExplorer?: boolean;
   onTogglePlacesExplorer?: () => void;
   totalMarkersCount?: number;
@@ -78,6 +80,8 @@ export function GoogleMapsSearchCard({
   weatherLocation,
   showDistricts,
   onToggleDistricts,
+  showMetroLines,
+  onToggleMetroLines,
   showPlacesExplorer,
   onTogglePlacesExplorer,
   onOpenShare,
@@ -459,6 +463,21 @@ export function GoogleMapsSearchCard({
           >
             <MapPin className="w-3.5 h-3.5 text-blue-500" />
             <span>1,200 Places</span>
+          </button>
+        )}
+
+        {/* Delhi Metro Network Chip */}
+        {onToggleMetroLines && (
+          <button
+            onClick={onToggleMetroLines}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-md flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
+              showMetroLines
+                ? "bg-amber-500 text-white ring-2 ring-amber-300/40"
+                : "bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <Train className="w-3.5 h-3.5 text-amber-500" />
+            <span>Metro</span>
           </button>
         )}
 

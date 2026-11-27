@@ -11,6 +11,8 @@ import { MapErrorBoundary } from "@/components/ui/MapErrorBoundary";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { ChoroplethLegend } from "@/components/ui/ChoroplethLegend";
 import { ShareModal } from "@/components/ui/ShareModal";
+import { MobileBottomBar } from "@/components/ui/MobileBottomBar";
+import { MetroStation } from "@/lib/metroData";
 import { LayerType, LandmarkLocation, UserLocationState } from "@/types/map";
 import { DistrictProperties, MarkerPoi } from "@/types/geojson";
 import { DELHI_PRIMARY_LANDMARKS } from "@/lib/constants";
@@ -49,6 +51,10 @@ export default function Home() {
     "density" | "population" | "literacyRate" | "areaKm2"
   >("density");
   const [selectedDistrict, setSelectedDistrict] = useState<DistrictProperties | null>(null);
+
+  // Delhi Metro & Mobile Clear Map Mode State
+  const [showMetroLines, setShowMetroLines] = useState(true);
+  const [isClearMapMobile, setIsClearMapMobile] = useState(false);
 
   // 1-Click WhatsApp & Web Share State
   const [shareModalData, setShareModalData] = useState<{
@@ -404,23 +410,35 @@ export default function Home() {
     });
   };
 
+  const handleSelectMetroStation = (station: MetroStation) => {
+    setFlyToCoords(station.coordinates);
+    setWeatherLocation({
+      coords: station.coordinates,
+      name: `${station.name} (${station.line})`,
+    });
+  };
+
   return (
     <div className="relative w-screen h-screen overflow-hidden select-none bg-slate-100 dark:bg-[#1f1f1f]">
-      {/* Top-Left Floating Google Maps Search Card */}
-      <GoogleMapsSearchCard
-        selectedLandmark={selectedLandmark}
-        onSelectLandmark={handleSelectLandmark}
-        onFlyTo={(coords) => setFlyToCoords(coords)}
-        onToggleMenu={() => setIsDrawerOpen(true)}
-        onOpenAi={() => setIsAskMapsOpen(true)}
-        weatherLocation={weatherLocation}
-        showDistricts={showDistrictsGeoJson}
-        onToggleDistricts={() => setShowDistrictsGeoJson((prev) => !prev)}
-        showPlacesExplorer={isPlacesExplorerOpen}
-        onTogglePlacesExplorer={() => setIsPlacesExplorerOpen((prev) => !prev)}
-        totalMarkersCount={allMarkers.length || 1200}
-        onOpenShare={handleOpenShare}
-      />
+      {/* Top-Left Floating Google Maps Search Card (Hidden when Clear Map on mobile) */}
+      <div className={isClearMapMobile ? "hidden sm:block" : "block"}>
+        <GoogleMapsSearchCard
+          selectedLandmark={selectedLandmark}
+          onSelectLandmark={handleSelectLandmark}
+          onFlyTo={(coords) => setFlyToCoords(coords)}
+          onToggleMenu={() => setIsDrawerOpen(true)}
+          onOpenAi={() => setIsAskMapsOpen(true)}
+          weatherLocation={weatherLocation}
+          showDistricts={showDistrictsGeoJson}
+          onToggleDistricts={() => setShowDistrictsGeoJson((prev) => !prev)}
+          showMetroLines={showMetroLines}
+          onToggleMetroLines={() => setShowMetroLines((prev) => !prev)}
+          showPlacesExplorer={isPlacesExplorerOpen}
+          onTogglePlacesExplorer={() => setIsPlacesExplorerOpen((prev) => !prev)}
+          totalMarkersCount={allMarkers.length || 1200}
+          onOpenShare={handleOpenShare}
+        />
+      </div>
 
       {/* Top-Right Dynamic Weather & Air Quality Widget (Desktop View only) */}
       <div className="hidden sm:block">
@@ -431,17 +449,19 @@ export default function Home() {
         />
       </div>
 
-      {/* Level 2: Delhi 11 Districts Choropleth Legend & District Card with POI Bridge */}
-      <ChoroplethLegend
-        visible={showDistrictsGeoJson}
-        activeMetric={activeChoroplethMetric}
-        selectedDistrict={selectedDistrict}
-        onCloseDistrict={() => setSelectedDistrict(null)}
-        onChangeMetric={setActiveChoroplethMetric}
-        onToggleVisible={() => setShowDistrictsGeoJson(false)}
-        districtPoiCount={districtPoiCount}
-        onViewDistrictPlaces={handleViewDistrictPlaces}
-      />
+      {/* Level 2: Delhi 11 Districts Choropleth Legend & District Card (Hidden when Clear Map on mobile) */}
+      <div className={isClearMapMobile ? "hidden sm:block" : "block"}>
+        <ChoroplethLegend
+          visible={showDistrictsGeoJson}
+          activeMetric={activeChoroplethMetric}
+          selectedDistrict={selectedDistrict}
+          onCloseDistrict={() => setSelectedDistrict(null)}
+          onChangeMetric={setActiveChoroplethMetric}
+          onToggleVisible={() => setShowDistrictsGeoJson(false)}
+          districtPoiCount={districtPoiCount}
+          onViewDistrictPlaces={handleViewDistrictPlaces}
+        />
+      </div>
 
       {/* Level 2 Pro: Places Explorer Sidebar with Sorting & Open Now Filter */}
       <Sidebar
@@ -477,6 +497,8 @@ export default function Home() {
         onToggleDistricts={() => setShowDistrictsGeoJson((prev) => !prev)}
         showMarkerClusters={showMarkerClusters}
         onToggleMarkerClusters={() => setShowMarkerClusters((prev) => !prev)}
+        showMetroLines={showMetroLines}
+        onToggleMetroLines={() => setShowMetroLines((prev) => !prev)}
         onOpenPlacesExplorer={() => setIsPlacesExplorerOpen(true)}
         totalMarkersCount={allMarkers.length || 1200}
       />
@@ -547,10 +569,24 @@ export default function Home() {
             clusterMarkers={filteredMarkers}
             selectedClusterMarkerId={selectedClusterMarker?.id || null}
             onSelectClusterMarker={handleSelectClusterMarker}
+            showMetroLines={showMetroLines}
+            onSelectMetroStation={handleSelectMetroStation}
             onOpenShare={handleOpenShare}
           />
         </MapErrorBoundary>
       </main>
+
+      {/* Modern Mobile Bottom Bar & Clear Map Controls */}
+      <MobileBottomBar
+        isClearMap={isClearMapMobile}
+        onToggleClearMap={() => setIsClearMapMobile((prev) => !prev)}
+        onOpenPlacesExplorer={() => setIsPlacesExplorerOpen(true)}
+        onOpenAi={() => setIsAskMapsOpen(true)}
+        showMetroLines={showMetroLines}
+        onToggleMetroLines={() => setShowMetroLines((prev) => !prev)}
+        onLocateUser={handleLocateUser}
+        isLocating={userLocation.loading}
+      />
 
       {/* 1-Click WhatsApp & Web Share Modal */}
       <ShareModal
