@@ -72,7 +72,7 @@ export function MarkerClusterLayer({
     }
   }, [map]);
 
-  // Update markers inside cluster group
+  // Update markers inside cluster group only when the marker list changes
   useEffect(() => {
     const clusterGroup = clusterGroupRef.current;
     if (!clusterGroup) return;
@@ -84,10 +84,9 @@ export function MarkerClusterLayer({
       const leafletMarkers: L.Marker[] = [];
 
       markers.forEach((m) => {
-        const isSelected = selectedMarkerId === m.id;
         const pinColor = m.categoryColor || "#ea4335";
-        const width = isSelected ? 30 : 24;
-        const height = isSelected ? 38 : 32;
+        const width = 24;
+        const height = 32;
 
         const svgHtml = `
           <div style="width: ${width}px; height: ${height}px; transform: translate(-50%, -100%);">
@@ -131,11 +130,14 @@ export function MarkerClusterLayer({
 
         leafletMarker.bindPopup(popupHtml, {
           closeButton: true,
+          autoClose: false,
+          closeOnClick: false,
           className: "custom-leaflet-popup",
         });
 
         leafletMarker.on("click", () => {
           onSelectMarker(m);
+          leafletMarker.openPopup();
         });
 
         leafletMarkers.push(leafletMarker);
@@ -146,9 +148,9 @@ export function MarkerClusterLayer({
     } catch (err) {
       console.error("Error updating cluster markers:", err);
     }
-  }, [markers, selectedMarkerId, onSelectMarker]);
+  }, [markers, onSelectMarker]);
 
-  // Fly and spiderfy when a marker is selected from the sidebar
+  // Fly and spiderfy when a marker is selected from the sidebar or link
   useEffect(() => {
     if (!selectedMarkerId || !clusterGroupRef.current) return;
     const targetMarker = markerMapRef.current.get(selectedMarkerId);
