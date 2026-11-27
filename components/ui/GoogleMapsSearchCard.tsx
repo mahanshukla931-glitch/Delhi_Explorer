@@ -43,6 +43,7 @@ interface GoogleMapsSearchCardProps {
   onTogglePlacesExplorer?: () => void;
   totalMarkersCount?: number;
   onOpenShare?: (data: { title: string; url: string; description?: string }) => void;
+  onRequestDirections?: (coords: [number, number], name: string) => void;
 }
 
 interface SearchResultItem {
@@ -85,6 +86,7 @@ export function GoogleMapsSearchCard({
   showPlacesExplorer,
   onTogglePlacesExplorer,
   onOpenShare,
+  onRequestDirections,
 }: GoogleMapsSearchCardProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("all");
@@ -694,11 +696,17 @@ export function GoogleMapsSearchCard({
 
             <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               <button
-                onClick={() => onFlyTo(selectedLandmark.coordinates)}
-                className="flex-1 py-2.5 px-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                onClick={() => {
+                  if (onRequestDirections) {
+                    onRequestDirections(selectedLandmark.coordinates, selectedLandmark.name);
+                  } else {
+                    onFlyTo(selectedLandmark.coordinates);
+                  }
+                }}
+                className="flex-1 py-2.5 px-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
               >
                 <Navigation className="w-3.5 h-3.5 fill-white" />
-                Directions / Zoom
+                <span>Directions & Route</span>
               </button>
 
               <a

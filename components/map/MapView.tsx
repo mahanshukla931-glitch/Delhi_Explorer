@@ -21,7 +21,9 @@ import { MapEventsHandler } from "./MapEventsHandler";
 import { DelhiDistrictsGeoJson } from "./DelhiDistrictsGeoJson";
 import { MarkerClusterLayer } from "./MarkerClusterLayer";
 import { DelhiMetroLayer } from "./DelhiMetroLayer";
+import { MapRouteLayer } from "./MapRouteLayer";
 import { MetroStation } from "@/lib/metroData";
+import { RouteData } from "@/types/routing";
 
 // Fix default Leaflet marker icon asset paths
 delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
@@ -55,6 +57,8 @@ interface MapViewProps {
   showMetroLines?: boolean;
   onSelectMetroStation?: (station: MetroStation) => void;
   onOpenShare?: (data: { title: string; url: string; description?: string }) => void;
+  activeRoute?: RouteData | null;
+  onClearRoute?: () => void;
 }
 
 export default function MapView({
@@ -76,6 +80,8 @@ export default function MapView({
   showMetroLines = true,
   onSelectMetroStation,
   onOpenShare,
+  activeRoute = null,
+  onClearRoute,
 }: MapViewProps) {
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const [centerCoords, setCenterCoords] = useState<[number, number]>(DELHI_DEFAULT_CENTER);
@@ -130,6 +136,14 @@ export default function MapView({
           visible={showMetroLines}
           onSelectStation={(station) => onSelectMetroStation?.(station)}
         />
+
+        {/* Level 3: Navigation Route Polyline Layer */}
+        {activeRoute && (
+          <MapRouteLayer
+            route={activeRoute}
+            onClearRoute={() => onClearRoute?.()}
+          />
+        )}
 
         {/* Level 2: 1,200+ Marker Clustering Layer */}
         {showMarkerClusters && clusterMarkers && clusterMarkers.length > 0 && (

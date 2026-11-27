@@ -12,7 +12,9 @@ import { Sidebar } from "@/components/sidebar/Sidebar";
 import { ChoroplethLegend } from "@/components/ui/ChoroplethLegend";
 import { ShareModal } from "@/components/ui/ShareModal";
 import { MobileBottomBar } from "@/components/ui/MobileBottomBar";
+import { DirectionsDrawer } from "@/components/ui/DirectionsDrawer";
 import { MetroStation } from "@/lib/metroData";
+import { RouteData, TravelMode } from "@/types/routing";
 import { LayerType, LandmarkLocation, UserLocationState } from "@/types/map";
 import { DistrictProperties, MarkerPoi } from "@/types/geojson";
 import { DELHI_PRIMARY_LANDMARKS } from "@/lib/constants";
@@ -54,6 +56,11 @@ export default function Home() {
 
   // Delhi Metro State
   const [showMetroLines, setShowMetroLines] = useState(true);
+
+  // Level 3: Navigation & Routing State
+  const [activeRoute, setActiveRoute] = useState<RouteData | null>(null);
+  const [isDirectionsDrawerOpen, setIsDirectionsDrawerOpen] = useState(false);
+  const [isRoutingLoading, setIsRoutingLoading] = useState(false);
 
   // 1-Click WhatsApp & Web Share State
   const [shareModalData, setShareModalData] = useState<{
@@ -417,6 +424,42 @@ export default function Home() {
     });
   };
 
+  // Level 3: Fetch Directions & Route between Points
+  const handleCalculateRoute = async (
+    destCoords: [number, number],
+    destName: string,
+    mode: TravelMode = "driving"
+  ) => {
+    try {
+      setIsRoutingLoading(true);
+      const startCoords = userLocation.coords || DELHI_PRIMARY_LANDMARKS[0].coordinates; // Default to India Gate if GPS not allowed
+      const originName = userLocation.coords ? weatherLocation.name || "My Location" : "India Gate (Central Delhi)";
+
+      const res = await fetch(
+        `/api/route?startLat=${startCoords[0]}&startLng=${startCoords[1]}&endLat=${destCoords[0]}&endLng=${destCoords[1]}&mode=${mode}`
+      );
+
+      if (!res.ok) {
+        throw new Error("Unable to fetch route");
+      }
+
+      const data = await res.json();
+      setActiveRoute({
+        ...data,
+        originName,
+        destinationName: destName,
+        originCoords: startCoords,
+        destinationCoords: destCoords,
+      });
+      setIsDirectionsDrawerOpen(true);
+    } catch (err) {
+      console.error(err);
+      setErrorNotice("Could not calculate road route. Please verify locations.");
+    } finally {
+      setIsRoutingLoading(false);
+    }
+  };
+
   return (
     <div className="relative w-screen h-screen overflow-hidden select-none bg-slate-100 dark:bg-[#1f1f1f]">
       {/* Top-Left Floating Google Maps Search Card */}
@@ -435,6 +478,7 @@ export default function Home() {
         onTogglePlacesExplorer={() => setIsPlacesExplorerOpen((prev) => !prev)}
         totalMarkersCount={allMarkers.length || 1200}
         onOpenShare={handleOpenShare}
+        onRequestDirections={(coords, name) => handleCalculateRoute(coords, name)}
       />
 
       {/* Top-Right Dynamic Weather & Air Quality Widget (Desktop View only) */}
@@ -567,9 +611,34 @@ export default function Home() {
             showMetroLines={showMetroLines}
             onSelectMetroStation={handleSelectMetroStation}
             onOpenShare={handleOpenShare}
+            activeRoute={activeRoute}
+            onClearRoute={() => {
+              setActiveRoute(null);
+              setIsDirectionsDrawerOpen(false);
+            }}
           />
         </MapErrorBoundary>
       </main>
+
+      {/* Level 3: Turn-by-Turn Navigation & Routing Drawer */}
+      <DirectionsDrawer
+        route={activeRoute}
+        isOpen={isDirectionsDrawerOpen}
+        onClose={() => {
+          setIsDirectionsDrawerOpen(false);
+          setActiveRoute(null);
+        }}
+        onChangeMode={(mode) => {
+          if (activeRoute) {
+            handleCalculateRoute(
+              activeRoute.destinationCoords,
+              activeRoute.destinationName,
+              mode
+            );
+          }
+        }}
+        isLoading={isRoutingLoading}
+      />
 
       {/* Modern Mobile Bottom Bar */}
       <MobileBottomBar
