@@ -6,10 +6,10 @@ export const DELHI_DEFAULT_ZOOM = 12;
 export const MAP_LAYERS: Record<string, MapLayerConfig> = {
   osm: {
     id: "osm",
-    name: "Google Maps Style (Clean & Crisp)",
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    maxZoom: 20,
+    name: "Google Street Style (HD)",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+    attribution: 'Tiles &copy; Esri &mdash; Sources: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom',
+    maxZoom: 19,
   },
   satellite: {
     id: "satellite",
@@ -21,9 +21,9 @@ export const MAP_LAYERS: Record<string, MapLayerConfig> = {
   dark: {
     id: "dark",
     name: "Dark Canvas (Night)",
-    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    attribution: '&copy; OpenStreetMap &copy; CARTO',
-    maxZoom: 20,
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+    maxZoom: 16,
   },
   terrain: {
     id: "terrain",
