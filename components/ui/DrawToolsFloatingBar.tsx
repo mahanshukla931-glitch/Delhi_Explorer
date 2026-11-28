@@ -218,8 +218,10 @@ export function DrawToolsFloatingBar({
             return (
               <button
                 key={tool.id}
+                data-draw-tool={tool.id}
                 onClick={() => handleToggleTool(tool.id)}
                 title={tool.hint}
+                aria-label={`Draw ${tool.label}`}
                 className={`px-2 sm:px-2.5 py-1.5 rounded-xl font-bold flex items-center gap-1 transition-all shrink-0 cursor-pointer ${
                   isActive
                     ? "bg-purple-600 text-white shadow-sm ring-2 ring-purple-400/50 scale-[1.02]"
@@ -323,9 +325,24 @@ export function DrawToolsFloatingBar({
           )}
           <span className="truncate font-medium">{activeHint}</span>
         </div>
-        <div className="flex items-center gap-2 shrink-0 text-[10px] text-slate-400">
+        <div className="flex items-center gap-2 shrink-0">
+          {(activeTool === "polygon" || activeTool === "line") && (
+            <button
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent("delhi_draw_tool_trigger", {
+                    detail: { mode: "finish" },
+                  })
+                );
+              }}
+              className="px-2 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] flex items-center gap-1 shadow-xs active:scale-95 cursor-pointer transition-colors"
+            >
+              <Check className="w-3 h-3 stroke-[3]" />
+              <span>Complete Shape</span>
+            </button>
+          )}
           {shapesCount > 0 && (
-            <span className="font-semibold text-slate-500 dark:text-slate-300">
+            <span className="font-semibold text-slate-500 dark:text-slate-300 text-[10px]">
               {shapesCount} shape{shapesCount > 1 ? "s" : ""} on map
             </span>
           )}

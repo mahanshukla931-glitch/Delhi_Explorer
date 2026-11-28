@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useRef } from "react";
@@ -35,6 +36,7 @@ export function MarkerClusterLayer({
         spiderfyOnMaxZoom: true,
         showCoverageOnHover: false,
         zoomToBoundsOnClick: true,
+        pmIgnore: true,
         iconCreateFunction: (cluster: MarkerCluster) => {
           const count = cluster.getChildCount();
           let bgClass = "bg-blue-600 text-white shadow-md ring-2 ring-blue-400/40";
@@ -109,7 +111,9 @@ export function MarkerClusterLayer({
           icon,
           title: m.name,
           alt: m.name,
-        });
+          // Tell Geoman to ignore cluster markers
+          pmIgnore: true,
+        } as any);
 
         // Custom Google Maps style rich popup
         const popupHtml = `

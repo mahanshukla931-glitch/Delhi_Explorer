@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -11,6 +12,7 @@ interface DelhiDistrictsGeoJsonProps {
   activeMetric: "density" | "population" | "literacyRate" | "areaKm2";
   onSelectDistrict: (props: DistrictProperties | null) => void;
   isDarkMode?: boolean;
+  isDrawingActive?: boolean;
 }
 
 export function DelhiDistrictsGeoJson({
@@ -18,6 +20,7 @@ export function DelhiDistrictsGeoJson({
   activeMetric,
   onSelectDistrict,
   isDarkMode = false,
+  isDrawingActive = false,
 }: DelhiDistrictsGeoJsonProps) {
   const map = useMap();
   const [geoData, setGeoData] = useState<GeoJSON.FeatureCollection | null>(null);
@@ -99,7 +102,9 @@ export function DelhiDistrictsGeoJson({
       color: isDarkMode ? "#38bdf8" : "#ffffff",
       dashArray: "3",
       fillOpacity: isDarkMode ? 0.45 : 0.55,
-    };
+      pmIgnore: true,
+      interactive: !isDrawingActive,
+    } as any;
   };
 
   const onEachFeature = (feature: Feature, layer: L.Layer) => {
@@ -108,6 +113,7 @@ export function DelhiDistrictsGeoJson({
     // Hover Highlight & Click
     layer.on({
       mouseover: (e) => {
+        if (isDrawingActive) return;
         const l = e.target;
         l.setStyle({
           weight: 4,
@@ -118,10 +124,12 @@ export function DelhiDistrictsGeoJson({
         l.bringToFront();
       },
       mouseout: (e) => {
+        if (isDrawingActive) return;
         const l = e.target;
         l.setStyle(styleFeature(feature));
       },
       click: (e) => {
+        if (isDrawingActive) return;
         onSelectDistrict(props);
         const l = e.target;
         if (l.getBounds) {

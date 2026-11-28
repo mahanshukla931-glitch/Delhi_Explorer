@@ -109,6 +109,15 @@ export function GeomanDrawLayer({
   // 1. Initial Load of Saved Shapes from LocalStorage (survives page refresh & syncs on events)
   useEffect(() => {
     if (!map) return;
+    if (typeof window !== "undefined") {
+      (window as any).delhiMap = map;
+    }
+
+    // Ensure map.pm is initialized immediately
+    if (!(map as any).pm && (L as any).PM?.Map) {
+      (map as any).pm = new (L as any).PM.Map(map);
+      (map as any).pm.setGlobalOptions({});
+    }
 
     const renderStoredShapes = () => {
       // Clear any previous references
@@ -168,9 +177,15 @@ export function GeomanDrawLayer({
 
   // 2. Toolbar controls and create/edit/delete event listeners
   useEffect(() => {
-    if (!map || !(map as any).pm) return;
+    if (!map) return;
+
+    if (!(map as any).pm && (L as any).PM?.Map) {
+      (map as any).pm = new (L as any).PM.Map(map);
+      (map as any).pm.setGlobalOptions({});
+    }
 
     const pm = (map as any).pm;
+    if (!pm) return;
 
     if (!enabled) {
       try {
@@ -248,6 +263,7 @@ export function GeomanDrawLayer({
       // Reset draw mode in floating bar & disable draw mode
       window.dispatchEvent(new Event("delhi_draw_reset"));
       if (pm.disableDraw) pm.disableDraw();
+      if (map.getContainer()) map.getContainer().style.cursor = "";
     };
 
     // Handle Edit Shape Event (Persistence)
@@ -311,15 +327,29 @@ export function GeomanDrawLayer({
       const mode = e.detail?.mode;
       if (!pm) return;
 
+      if (mode === "finish") {
+        try {
+          if (pm.Draw?.Polygon?.finish) pm.Draw.Polygon.finish();
+          else if (pm.Draw?.Line?.finish) pm.Draw.Line.finish();
+          else if (pm.finishDraw) pm.finishDraw();
+        } catch (err) {
+          console.warn("Geoman finishDraw error:", err);
+        }
+        return;
+      }
+
       try {
         if (pm.disableDraw) pm.disableDraw();
         if (pm.globalEditModeEnabled && pm.globalEditModeEnabled()) pm.disableGlobalEditMode();
         if (pm.globalRemovalModeEnabled && pm.globalRemovalModeEnabled()) pm.disableGlobalRemovalMode();
+        if (map.getContainer()) map.getContainer().style.cursor = "";
       } catch (err) {
         console.warn("Geoman reset warning:", err);
       }
 
       if (!mode || mode === "none") return;
+
+      if (map.getContainer()) map.getContainer().style.cursor = "crosshair";
 
       pm.setPathOptions({
         color: activeColorRef.current,

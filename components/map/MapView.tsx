@@ -18,6 +18,8 @@ import { MapMarkers } from "./MapMarkers";
 import { MapControlsOverlay } from "./MapControlsOverlay";
 import { LocationMarker } from "./LocationMarker";
 import dynamic from "next/dynamic";
+import "@geoman-io/leaflet-geoman-free";
+import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 import { MapEventsHandler } from "./MapEventsHandler";
 import { DelhiDistrictsGeoJson } from "./DelhiDistrictsGeoJson";
 import { MarkerClusterLayer } from "./MarkerClusterLayer";
@@ -200,6 +202,7 @@ export default function MapView({
             activeMetric={activeChoroplethMetric}
             onSelectDistrict={(props) => onSelectDistrict?.(props)}
             isDarkMode={isDarkMode}
+            isDrawingActive={showDrawTools}
           />
         )}
 
