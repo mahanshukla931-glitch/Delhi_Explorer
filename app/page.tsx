@@ -72,6 +72,8 @@ export default function Home() {
   const [showDrawTools, setShowDrawTools] = useState(false);
   const [activeDrawColor, setActiveDrawColor] = useState("#2563eb");
   const [isNavSimActive, setIsNavSimActive] = useState(false);
+  const [navSimPosition, setNavSimPosition] = useState<[number, number] | null>(null);
+  const [navSimBearing, setNavSimBearing] = useState<number>(0);
 
   // Level 3: Overpass Nearby Search State
   const [isNearbyDrawerOpen, setIsNearbyDrawerOpen] = useState(false);
@@ -204,70 +206,119 @@ export default function Home() {
     setIsPlacesExplorerOpen(true);
   };
 
-  // Auto-detect user GPS on initial load
-  useEffect(() => {
-    if (typeof window !== "undefined" && navigator.geolocation) {
+  // Bulletproof user GPS auto-detect and locate function with two-phase fallback
+  const detectLocation = useCallback(
+    (isUserInitiated = false) => {
+      if (typeof window === "undefined" || !navigator.geolocation) {
+        if (isUserInitiated) {
+          const msg = "Geolocation is not supported by your browser.";
+          setUserLocation((prev) => ({ ...prev, loading: false, error: msg }));
+          setErrorNotice(msg);
+        }
+        return;
+      }
+
+      setUserLocation((prev) => ({ ...prev, loading: true, error: null }));
+      if (isUserInitiated) setErrorNotice(null);
+
       const searchParams = new URLSearchParams(window.location.search);
       const hasSharedLocation =
         searchParams.has("lat") || searchParams.has("place") || searchParams.has("poi");
 
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-          setUserLocation({
-            coords,
-            accuracy: pos.coords.accuracy,
-            loading: false,
-            error: null,
-          });
+      const handleSuccess = async (pos: GeolocationPosition) => {
+        const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+        setUserLocation({
+          coords,
+          accuracy: pos.coords.accuracy,
+          loading: false,
+          error: null,
+        });
 
-          // Only fly to GPS if user did NOT arrive via a shared link/place!
-          if (!hasSharedLocation) {
-            setFlyToCoords(coords);
-          }
+        // If user explicitly clicked Locate, or if initial load without shared URL, center on user
+        if (isUserInitiated || !hasSharedLocation) {
+          setFlyToCoords(coords);
+        }
 
-          // Reverse geocode via OpenStreetMap to detect user's live city name
-          try {
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords[0]}&lon=${coords[1]}`
-            );
-            if (res.ok) {
-              const data = await res.json();
-              const detectedCity =
-                data.address?.city ||
-                data.address?.town ||
-                data.address?.suburb ||
-                data.address?.state_district ||
-                data.address?.state ||
-                "My Location";
+        // Reverse geocode via internal resilient API (safe for deployed HTTPS & mobile)
+        try {
+          const res = await fetch(`/api/reverse?lat=${coords[0]}&lng=${coords[1]}`);
+          if (res.ok) {
+            const data = await res.json();
+            const detectedName =
+              data.shortAddress ||
+              data.addressDetails?.city ||
+              data.addressDetails?.town ||
+              data.addressDetails?.suburb ||
+              data.addressDetails?.state ||
+              "My Current Location";
 
-              // Keep shared location name if arriving via shared place
-              if (!hasSharedLocation) {
-                setWeatherLocation({
-                  coords,
-                  name: detectedCity,
-                });
-              }
-              return;
+            if (isUserInitiated || !hasSharedLocation) {
+              setWeatherLocation({
+                coords,
+                name: detectedName,
+              });
             }
-          } catch {
-            // fallback
+            return;
           }
+        } catch (err) {
+          console.warn("Reverse geocode on locate:", err);
+        }
 
-          if (!hasSharedLocation) {
-            setWeatherLocation({
-              coords,
-              name: "My Location",
-            });
-          }
-        },
+        if (isUserInitiated || !hasSharedLocation) {
+          setWeatherLocation({
+            coords,
+            name: "My Location",
+          });
+        }
+      };
+
+      const handleFinalError = (err: GeolocationPositionError) => {
+        let msg = "Unable to retrieve your location.";
+        if (err.code === err.PERMISSION_DENIED) {
+          msg = "Location permission denied. Please allow location access in your browser settings.";
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          msg = "Location unavailable. Please check that GPS is enabled on your device.";
+        } else if (err.code === err.TIMEOUT) {
+          msg = "Location request timed out. Please try again.";
+        }
+        setUserLocation((prev) => ({ ...prev, loading: false, error: msg }));
+        if (isUserInitiated) {
+          setErrorNotice(msg);
+          setTimeout(() => {
+            setErrorNotice((current) => (current === msg ? null : current));
+          }, 4500);
+        }
+      };
+
+      // Two-step fallback: Try high accuracy first (e.g. GPS), fallback to coarse accuracy (cellular/Wi-Fi)
+      navigator.geolocation.getCurrentPosition(
+        handleSuccess,
         () => {
-          // If permission not granted, stay on Delhi default
+          // If high accuracy times out or is unavailable (common on mobile indoors or laptops), retry coarse
+          navigator.geolocation.getCurrentPosition(
+            handleSuccess,
+            handleFinalError,
+            {
+              enableHighAccuracy: false,
+              timeout: 10000,
+              maximumAge: 60000,
+            }
+          );
         },
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+        {
+          enableHighAccuracy: true,
+          timeout: 6000,
+          maximumAge: 15000,
+        }
       );
-    }
-  }, []);
+    },
+    []
+  );
+
+  // Auto-detect user GPS on initial load
+  useEffect(() => {
+    detectLocation(false);
+  }, [detectLocation]);
 
   // Restore Map state from URL query parameters (1-click shared links & WhatsApp deep links)
   useEffect(() => {
@@ -317,79 +368,8 @@ export default function Home() {
 
   // Handle Geolocation with comprehensive error fallbacks
   const handleLocateUser = useCallback(() => {
-    if (!navigator.geolocation) {
-      const msg = "Geolocation is not supported by your browser.";
-      setUserLocation((prev) => ({ ...prev, loading: false, error: msg }));
-      setErrorNotice(msg);
-      return;
-    }
-
-    setUserLocation((prev) => ({ ...prev, loading: true, error: null }));
-    setErrorNotice(null);
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-        setUserLocation({
-          coords,
-          accuracy: pos.coords.accuracy,
-          loading: false,
-          error: null,
-        });
-        setFlyToCoords(coords);
-
-        try {
-          const res = await fetch(
-            `/api/reverse?lat=${coords[0]}&lng=${coords[1]}`
-          );
-          if (res.ok) {
-            const data = await res.json();
-            const detectedName =
-              data.shortAddress ||
-              data.addressDetails?.city ||
-              data.addressDetails?.town ||
-              data.addressDetails?.suburb ||
-              data.addressDetails?.state ||
-              "My Current Location";
-
-            setWeatherLocation({
-              coords,
-              name: detectedName,
-            });
-            return;
-          }
-        } catch {
-          // fallback
-        }
-
-        setWeatherLocation({
-          coords,
-          name: "My Location",
-        });
-      },
-      (err) => {
-        let msg = "Unable to retrieve your location.";
-        if (err.code === err.PERMISSION_DENIED) {
-          msg = "Location permission denied. Please allow location access in your browser settings.";
-        } else if (err.code === err.POSITION_UNAVAILABLE) {
-          msg = "Location information is currently unavailable.";
-        } else if (err.code === err.TIMEOUT) {
-          msg = "Location request timed out. Please try again.";
-        }
-        setUserLocation((prev) => ({ ...prev, loading: false, error: msg }));
-        setErrorNotice(msg);
-        // Auto-dismiss the toast notice after 4 seconds so it doesn't block the screen
-        setTimeout(() => {
-          setErrorNotice((current) => (current === msg ? null : current));
-        }, 4000);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 30000,
-      }
-    );
-  }, []);
+    detectLocation(true);
+  }, [detectLocation]);
 
   // Sync dark class on html with localStorage
   useEffect(() => {
@@ -456,10 +436,9 @@ export default function Home() {
       setIsRoutingLoading(true);
 
       // Determine starting point intelligently:
-      // If user hasn't specified a start point:
-      // - If user is in or near Delhi NCR (within 100km), use their live GPS!
-      // - If user's GPS is far away (e.g. Bhopal/interstate > 100km) or GPS not allowed,
-      //   default starting point to central Delhi (India Gate / CP) so intra-city Delhi exploration isn't distorted
+      // - If custom start coordinates are provided, use them.
+      // - If user has live GPS location, ALWAYS respect their live location as Point A.
+      // - Otherwise, default starting point to central Delhi (India Gate / CP).
       let startCoords: [number, number];
       let originName: string;
 
@@ -467,25 +446,8 @@ export default function Home() {
         startCoords = customStartCoords;
         originName = customOriginName;
       } else if (userLocation.coords) {
-        // Measure distance to Delhi center [28.6139, 77.209]
-        const dLat = (userLocation.coords[0] - 28.6139) * 111;
-        const dLng = (userLocation.coords[1] - 77.209) * 96;
-        const distFromDelhiKm = Math.sqrt(dLat * dLat + dLng * dLng);
-
-        if (distFromDelhiKm <= 90) {
-          startCoords = userLocation.coords;
-          originName = weatherLocation.name || "My Location (Delhi NCR)";
-        } else {
-          // If destination itself is Delhi Gate/etc, let origin be India Gate or Rajiv Chowk so user gets normal Delhi travel time
-          // unless user specifically searched for inter-city route
-          if (destName.toLowerCase().includes("india gate")) {
-            startCoords = [28.6328, 77.2197]; // Rajiv Chowk, Connaught Place
-            originName = "Connaught Place (CP)";
-          } else {
-            startCoords = DELHI_PRIMARY_LANDMARKS[0].coordinates;
-            originName = "India Gate (Central Delhi)";
-          }
-        }
+        startCoords = userLocation.coords;
+        originName = weatherLocation.name || "Your Live Location (GPS)";
       } else {
         if (destName.toLowerCase().includes("india gate")) {
           startCoords = [28.6328, 77.2197]; // Rajiv Chowk, Connaught Place
@@ -741,6 +703,9 @@ export default function Home() {
               handleSearchNearby(nearbyCategory, nearbyRadius, coords);
             }}
             onMapCenterChange={(center) => setCurrentMapCenter(center)}
+            isNavSimActive={isNavSimActive}
+            navSimPosition={navSimPosition}
+            navSimBearing={navSimBearing}
           />
         </MapErrorBoundary>
       </main>
@@ -761,8 +726,19 @@ export default function Home() {
         <NavigationSimulationBanner
           route={activeRoute}
           isActive={isNavSimActive}
-          onExit={() => setIsNavSimActive(false)}
-          onPositionUpdate={(coords) => setFlyToCoords(coords)}
+          onExit={() => {
+            setIsNavSimActive(false);
+            setNavSimPosition(null);
+          }}
+          onPositionUpdate={(coords, bearing) => {
+            setNavSimPosition(coords);
+            setNavSimBearing(bearing);
+          }}
+          onRecenter={() => {
+            if (navSimPosition) {
+              setFlyToCoords(navSimPosition);
+            }
+          }}
         />
       )}
 
@@ -788,9 +764,12 @@ export default function Home() {
       <DirectionsDrawer
         route={activeRoute}
         isOpen={isDirectionsDrawerOpen}
+        userLocation={userLocation}
         onClose={() => {
           setIsDirectionsDrawerOpen(false);
           setActiveRoute(null);
+          setIsNavSimActive(false);
+          setNavSimPosition(null);
         }}
         onChangeMode={(mode) => {
           if (activeRoute) {

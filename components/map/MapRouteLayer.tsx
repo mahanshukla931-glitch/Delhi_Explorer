@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Polyline, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { RouteData } from "@/types/routing";
@@ -8,12 +8,18 @@ import { RouteData } from "@/types/routing";
 interface MapRouteLayerProps {
   route: RouteData | null;
   onClearRoute?: () => void;
+  navPosition?: [number, number] | null;
+  navBearing?: number;
 }
 
-export function MapRouteLayer({ route }: MapRouteLayerProps) {
+export function MapRouteLayer({
+  route,
+  navPosition,
+  navBearing = 0,
+}: MapRouteLayerProps) {
   const map = useMap();
 
-  // Auto-fit route bounds on map
+  // Auto-fit route bounds on initial load
   useEffect(() => {
     if (!route || route.coordinates.length === 0 || !map) return;
     try {
@@ -27,6 +33,25 @@ export function MapRouteLayer({ route }: MapRouteLayerProps) {
       console.error("Error fitting route bounds:", err);
     }
   }, [route, map]);
+
+  // Google Maps Style Live Navigation Vehicle Icon (Directional Arrow with Ripple)
+  const navVehicleIcon = useMemo(() => {
+    return L.divIcon({
+      html: `
+        <div style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+          <div style="position: absolute; inset: 0; border-radius: 9999px; background: rgba(37, 99, 235, 0.28); animation: ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+          <div style="position: relative; width: 34px; height: 34px; border-radius: 9999px; background: #2563eb; border: 3px solid #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.38); display: flex; align-items: center; justify-content: center;">
+            <svg style="width: 18px; height: 18px; fill: white; transform: rotate(${navBearing}deg); transition: transform 0.3s ease;" viewBox="0 0 24 24">
+              <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" />
+            </svg>
+          </div>
+        </div>
+      `,
+      className: "nav-vehicle-marker-icon",
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
+    });
+  }, [navBearing]);
 
   if (!route || route.coordinates.length === 0) return null;
 
@@ -119,6 +144,11 @@ export function MapRouteLayer({ route }: MapRouteLayerProps) {
           </div>
         </Popup>
       </Marker>
+
+      {/* Live Moving Navigation Vehicle Puck */}
+      {navPosition && (
+        <Marker position={navPosition} icon={navVehicleIcon} zIndexOffset={1000} />
+      )}
     </>
   );
 }

@@ -31,6 +31,12 @@ interface DirectionsDrawerProps {
   ) => void;
   isLoading?: boolean;
   onStartNavigation?: () => void;
+  userLocation?: {
+    coords: [number, number] | null;
+    accuracy?: number | null;
+    loading?: boolean;
+    error?: string | null;
+  };
 }
 
 interface SearchSuggestion {
@@ -48,6 +54,7 @@ export function DirectionsDrawer({
   onUpdateRoute,
   isLoading = false,
   onStartNavigation,
+  userLocation,
 }: DirectionsDrawerProps) {
   const [showSteps, setShowSteps] = useState(false); // Collapsed on mobile to show map & route clearly
 
@@ -80,13 +87,14 @@ export function DirectionsDrawer({
     const q = query.trim().toLowerCase();
 
     // Base default recommendations (Landmarks + Current Location)
+    const liveCoords = userLocation?.coords || route?.originCoords;
     const defaults: SearchSuggestion[] = [
-      ...(field === "origin" && route?.originCoords
+      ...(field === "origin" && liveCoords
         ? [
             {
               name: "Your Live Location (GPS)",
-              subtext: "Current GPS Position",
-              coordinates: route.originCoords,
+              subtext: `${liveCoords[0].toFixed(4)}, ${liveCoords[1].toFixed(4)} (Current GPS)`,
+              coordinates: liveCoords,
               isCurrentLocation: true,
             },
           ]
@@ -302,6 +310,24 @@ export function DirectionsDrawer({
               }}
               className="w-full bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none"
             />
+            {userLocation?.coords && (
+              <button
+                type="button"
+                onClick={() => {
+                  handleSelectSuggestion({
+                    name: "Your Live Location (GPS)",
+                    subtext: "Current GPS Position",
+                    coordinates: userLocation.coords!,
+                    isCurrentLocation: true,
+                  });
+                }}
+                className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0 transition-colors"
+                title="Use Live GPS Location"
+              >
+                <LocateFixed className="w-3 h-3" />
+                <span>GPS</span>
+              </button>
+            )}
             {originInput && (
               <button
                 type="button"

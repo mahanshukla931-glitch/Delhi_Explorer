@@ -1,32 +1,32 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { MapContainer } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 import {
-  DELHI_DEFAULT_CENTER,
-  DELHI_DEFAULT_ZOOM,
-  DELHI_PRIMARY_LANDMARKS,
-} from "@/lib/constants";
-import { LayerType, LandmarkLocation, UserLocationState } from "@/types/map";
+  LayerType,
+  LandmarkLocation,
+  UserLocationState,
+} from "@/types/map";
 import { DistrictProperties, MarkerPoi } from "@/types/geojson";
+import { NearbyPlaceItem } from "./NearbyMarkersLayer";
+import { DELHI_DEFAULT_CENTER, DELHI_DEFAULT_ZOOM, DELHI_PRIMARY_LANDMARKS } from "@/lib/constants";
 import { MapLayers } from "./MapLayers";
 import { MapMarkers } from "./MapMarkers";
-import { LocationMarker } from "./LocationMarker";
 import { MapControlsOverlay } from "./MapControlsOverlay";
+import { LocationMarker } from "./LocationMarker";
 import { MapEventsHandler } from "./MapEventsHandler";
 import { DelhiDistrictsGeoJson } from "./DelhiDistrictsGeoJson";
 import { MarkerClusterLayer } from "./MarkerClusterLayer";
 import { LeafletHeatLayer } from "./LeafletHeatLayer";
 import { DelhiMetroLayer } from "./DelhiMetroLayer";
 import { TrafficLayer } from "./TrafficLayer";
-import { MapRouteLayer } from "./MapRouteLayer";
 import { GeomanDrawLayer } from "./GeomanDrawLayer";
 import { ReverseGeocodingHandler } from "./ReverseGeocodingHandler";
-import { NearbyMarkersLayer, NearbyPlaceItem } from "./NearbyMarkersLayer";
+import { NearbyMarkersLayer } from "./NearbyMarkersLayer";
+import { MapRouteLayer } from "./MapRouteLayer";
 import { MetroStation } from "@/lib/metroData";
 import { RouteData } from "@/types/routing";
 
@@ -74,6 +74,10 @@ interface MapViewProps {
   onRequestDirections?: (coords: [number, number], name: string) => void;
   onFindNearbyHere?: (coords: [number, number]) => void;
   onMapCenterChange?: (center: [number, number]) => void;
+  // Live Navigation Simulation Props:
+  isNavSimActive?: boolean;
+  navSimPosition?: [number, number] | null;
+  navSimBearing?: number;
 }
 
 export default function MapView({
@@ -106,20 +110,38 @@ export default function MapView({
   onRequestDirections,
   onFindNearbyHere,
   onMapCenterChange,
+  isNavSimActive = false,
+  navSimPosition = null,
+  navSimBearing = 0,
 }: MapViewProps) {
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const [centerCoords, setCenterCoords] = useState<[number, number]>(DELHI_DEFAULT_CENTER);
   const [mapZoom, setMapZoom] = useState<number>(DELHI_DEFAULT_ZOOM);
   const [cursorCoords, setCursorCoords] = useState<[number, number] | null>(null);
 
+  // Standard landmark or place jump
   useEffect(() => {
-    if (mapInstance && flyToLocation) {
+    if (mapInstance && flyToLocation && !isNavSimActive) {
       mapInstance.flyTo(flyToLocation, 15, {
         duration: 1.4,
         easeLinearity: 0.25,
       });
     }
-  }, [flyToLocation, mapInstance]);
+  }, [flyToLocation, mapInstance, isNavSimActive]);
+
+  // Google Maps Style Live Navigation Tracking (Smooth camera pan)
+  useEffect(() => {
+    if (mapInstance && isNavSimActive && navSimPosition) {
+      mapInstance.panTo(navSimPosition, {
+        animate: true,
+        duration: 0.8,
+      });
+    }
+  }, [navSimPosition, isNavSimActive, mapInstance]);
+
+  // Clean navigation view: declutter heavy background layers while user is navigating
+  const effectiveShowDistricts = showDistricts && !isNavSimActive;
+  const effectiveShowClusters = showMarkerClusters && !isNavSimActive && !showHeatmap;
 
   return (
     <div className="relative w-full h-full min-h-[500px] overflow-hidden bg-slate-100 dark:bg-[#1a1a1a]">
@@ -142,7 +164,7 @@ export default function MapView({
             onMapCenterChange?.(center);
 
             // Level 4: Seamlessly sync map state to browser URL without re-rendering or page reload
-            if (typeof window !== "undefined" && window.history?.replaceState) {
+            if (typeof window !== "undefined" && window.history?.replaceState && !isNavSimActive) {
               const url = new URL(window.location.href);
               url.searchParams.set("lat", center[0].toFixed(4));
               url.searchParams.set("lng", center[1].toFixed(4));
@@ -157,9 +179,9 @@ export default function MapView({
         />
 
         {/* Level 2: Delhi 11 Districts GeoJSON Choropleth Layer */}
-        {showDistricts && (
+        {effectiveShowDistricts && (
           <DelhiDistrictsGeoJson
-            visible={showDistricts}
+            visible={effectiveShowDistricts}
             activeMetric={activeChoroplethMetric}
             onSelectDistrict={(props) => onSelectDistrict?.(props)}
             isDarkMode={isDarkMode}
@@ -175,18 +197,18 @@ export default function MapView({
         {/* Live Delhi Traffic Overlay */}
         <TrafficLayer visible={showTraffic} />
 
-        {/* Level 3: Geoman Drawing & Measurement Layer (Draw polygon, polyline, circle, marker; measure area/distance; persist to LocalStorage) */}
-        <GeomanDrawLayer enabled={showDrawTools} activeColor={activeDrawColor} />
+        {/* Level 3: Geoman Drawing & Measurement Layer */}
+        <GeomanDrawLayer enabled={showDrawTools && !isNavSimActive} activeColor={activeDrawColor} />
 
-        {/* Level 3: Reverse Geocoding Map Click Handler (Click map -> address popup with Navigate & Nearby) */}
+        {/* Level 3: Reverse Geocoding Map Click Handler */}
         <ReverseGeocodingHandler
-          enabled={!showDrawTools}
+          enabled={!showDrawTools && !isNavSimActive}
           onRequestDirections={onRequestDirections}
           onFindNearbyHere={onFindNearbyHere}
         />
 
-        {/* Level 3: Overpass API Nearby POIs Layer (Café, ATM, Hospital, Restaurant, etc.) */}
-        {nearbyPlaces && nearbyPlaces.length > 0 && (
+        {/* Level 3: Overpass API Nearby POIs Layer */}
+        {nearbyPlaces && nearbyPlaces.length > 0 && !isNavSimActive && (
           <NearbyMarkersLayer
             places={nearbyPlaces}
             onSelectPlace={(p) => onSelectNearbyPlace?.(p)}
@@ -194,21 +216,23 @@ export default function MapView({
           />
         )}
 
-        {/* Level 3: Navigation Route Polyline Layer (OSRM Driving, Walking, Cycling) */}
+        {/* Level 3: Navigation Route Polyline Layer with Live Vehicle Puck */}
         {activeRoute && (
           <MapRouteLayer
             route={activeRoute}
             onClearRoute={() => onClearRoute?.()}
+            navPosition={isNavSimActive ? navSimPosition : null}
+            navBearing={navSimBearing}
           />
         )}
 
         {/* Level 4: Heatmap Density Layer (leaflet.heat) */}
-        {showHeatmap && clusterMarkers && clusterMarkers.length > 0 && (
+        {showHeatmap && !isNavSimActive && clusterMarkers && clusterMarkers.length > 0 && (
           <LeafletHeatLayer markers={clusterMarkers} visible={showHeatmap} />
         )}
 
-        {/* Level 2: 1,200+ Marker Clustering Layer (Hidden when Heatmap is active so heatmap glows clearly) */}
-        {!showHeatmap && showMarkerClusters && clusterMarkers && clusterMarkers.length > 0 && (
+        {/* Level 2: 1,200+ Marker Clustering Layer */}
+        {effectiveShowClusters && clusterMarkers && clusterMarkers.length > 0 && (
           <MarkerClusterLayer
             markers={clusterMarkers}
             selectedMarkerId={selectedClusterMarkerId}
@@ -217,7 +241,7 @@ export default function MapView({
         )}
 
         {/* Primary Landmarks (when clustering is toggled off or as fallback) */}
-        {!showMarkerClusters && (
+        {!effectiveShowClusters && !isNavSimActive && (
           <MapMarkers
             landmarks={DELHI_PRIMARY_LANDMARKS}
             selectedLandmarkId={selectedLandmark?.id || null}

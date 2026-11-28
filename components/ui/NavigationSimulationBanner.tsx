@@ -11,6 +11,7 @@ import {
   GitFork,
   Gauge,
   CheckCircle,
+  LocateFixed,
 } from "lucide-react";
 import { RouteData } from "@/types/routing";
 
@@ -18,7 +19,21 @@ interface NavigationSimulationBannerProps {
   route: RouteData;
   isActive: boolean;
   onExit: () => void;
-  onPositionUpdate?: (coords: [number, number]) => void;
+  onPositionUpdate?: (coords: [number, number], bearing: number) => void;
+  onRecenter?: () => void;
+}
+
+// Calculate bearing between two GPS points in degrees (0 - 360)
+function calculateBearing(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const toDeg = (r: number) => (r * 180) / Math.PI;
+  const dLng = toRad(lng2 - lng1);
+  const y = Math.sin(dLng) * Math.cos(toRad(lat2));
+  const x =
+    Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+    Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
+  const brng = toDeg(Math.atan2(y, x));
+  return (brng + 360) % 360;
 }
 
 // Helper to pick accurate maneuver turn icon based on OSRM type and modifier
@@ -43,6 +58,7 @@ export function NavigationSimulationBanner({
   isActive,
   onExit,
   onPositionUpdate,
+  onRecenter,
 }: NavigationSimulationBannerProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [currentCoordIndex, setCurrentCoordIndex] = useState(0);
@@ -55,6 +71,19 @@ export function NavigationSimulationBanner({
     setCurrentCoordIndex(0);
     setCurrentStepIndex(0);
 
+    // Initial position dispatch
+    if (route.coordinates.length > 1) {
+      const b = calculateBearing(
+        route.coordinates[0][0],
+        route.coordinates[0][1],
+        route.coordinates[1][0],
+        route.coordinates[1][1]
+      );
+      onPositionUpdate?.(route.coordinates[0], b);
+    } else {
+      onPositionUpdate?.(route.coordinates[0], 0);
+    }
+
     const interval = setInterval(() => {
       setCurrentCoordIndex((prev) => {
         const next = prev + 1;
@@ -62,13 +91,17 @@ export function NavigationSimulationBanner({
           clearInterval(interval);
           return prev;
         }
-        onPositionUpdate?.(route.coordinates[next]);
+
+        const curr = route.coordinates[prev];
+        const nxt = route.coordinates[next];
+        const bearing = calculateBearing(curr[0], curr[1], nxt[0], nxt[1]);
+        onPositionUpdate?.(nxt, bearing);
         return next;
       });
 
-      // Random natural road speed variation (32 - 48 km/h)
-      setSpeedKmh(Math.floor(32 + Math.random() * 16));
-    }, 1200);
+      // Natural vehicle driving speed variation (34 - 52 km/h)
+      setSpeedKmh(Math.floor(34 + Math.random() * 18));
+    }, 1100);
 
     return () => clearInterval(interval);
   }, [isActive, route, onPositionUpdate]);
@@ -131,14 +164,26 @@ export function NavigationSimulationBanner({
             </div>
           </div>
 
-          <button
-            onClick={onExit}
-            className="p-1.5 rounded-full bg-black/20 hover:bg-black/40 text-white/90 hover:text-white transition-colors shrink-0 cursor-pointer"
-            title="Exit Navigation"
-            aria-label="Exit Navigation"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {onRecenter && (
+              <button
+                onClick={onRecenter}
+                className="p-1.5 rounded-full bg-black/20 hover:bg-black/40 text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                title="Re-center Camera on Car"
+                aria-label="Re-center Camera"
+              >
+                <LocateFixed className="w-4.5 h-4.5" />
+              </button>
+            )}
+            <button
+              onClick={onExit}
+              className="p-1.5 rounded-full bg-black/20 hover:bg-black/40 text-white/90 hover:text-white transition-colors cursor-pointer"
+              title="Exit Navigation"
+              aria-label="Exit Navigation"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Bottom Metrics Bar: Speed, Distance Left, ETA */}
