@@ -429,6 +429,11 @@ export function GoogleMapsSearchCard({
     }
   };
 
+  const onSelectLandmarkRef = useRef(onSelectLandmark);
+  useEffect(() => {
+    onSelectLandmarkRef.current = onSelectLandmark;
+  }, [onSelectLandmark]);
+
   // Automatically fetch Wikipedia photo for any selected landmark across India if image is missing
   useEffect(() => {
     if (selectedLandmark && !selectedLandmark.imageUrl) {
@@ -445,7 +450,7 @@ export function GoogleMapsSearchCard({
           if (pages) {
             const first = Object.values(pages)[0] as { thumbnail?: { source: string } };
             if (first?.thumbnail?.source) {
-              onSelectLandmark({
+              onSelectLandmarkRef.current({
                 ...selectedLandmark,
                 imageUrl: first.thumbnail.source,
               });
@@ -454,7 +459,7 @@ export function GoogleMapsSearchCard({
         })
         .catch(() => {});
     }
-  }, [selectedLandmark?.id]);
+  }, [selectedLandmark]);
 
   return (
     <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-30 w-[calc(100vw-24px)] max-w-[430px] pointer-events-none flex flex-col gap-2.5">

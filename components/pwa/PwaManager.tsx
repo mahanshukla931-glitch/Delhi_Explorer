@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Download, X, WifiOff, CheckCircle2 } from "lucide-react";
 
@@ -57,6 +57,23 @@ export function PwaManager() {
     }
   }, []);
 
+  const handleInstallClick = useCallback(async () => {
+    if (!deferredPrompt) return;
+
+    try {
+      await deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      if (choice.outcome === "accepted") {
+        setIsInstalled(true);
+        setShowInstallBanner(false);
+      }
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+    } catch (err) {
+      console.warn("PWA install error:", err);
+    }
+  }, [deferredPrompt]);
+
   // 2. Listen to beforeinstallprompt event
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -98,24 +115,7 @@ export function PwaManager() {
       window.removeEventListener("appinstalled", handleAppInstalled);
       window.removeEventListener("delhi_pwa_install_request", handleCustomInstall);
     };
-  }, [deferredPrompt]);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-
-    try {
-      await deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
-      if (choice.outcome === "accepted") {
-        setIsInstalled(true);
-        setShowInstallBanner(false);
-      }
-      setDeferredPrompt(null);
-      setIsInstallable(false);
-    } catch (err) {
-      console.error("PWA install error:", err);
-    }
-  };
+  }, [deferredPrompt, handleInstallClick]);
 
   const handleDismissBanner = () => {
     setShowInstallBanner(false);
