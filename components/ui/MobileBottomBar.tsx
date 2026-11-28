@@ -32,6 +32,7 @@ export function MobileBottomBar({
         {/* 1. Explore Places Drawer */}
         <button
           onClick={onOpenPlacesExplorer}
+          aria-label="Explore Delhi Places"
           className="flex flex-col items-center justify-center py-1.5 px-3 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95 transition-all"
         >
           <MapPin className="w-4.5 h-4.5 text-blue-600 dark:text-blue-400" />
@@ -41,6 +42,7 @@ export function MobileBottomBar({
         {/* 2. Metro Lines Toggle */}
         <button
           onClick={onToggleMetroLines}
+          aria-label="Toggle Delhi Metro Lines"
           className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all active:scale-95 ${
             showMetroLines
               ? "text-amber-600 dark:text-amber-400 font-extrabold"
@@ -54,6 +56,7 @@ export function MobileBottomBar({
         {/* 3. Center Ask AI Action */}
         <button
           onClick={onOpenAi}
+          aria-label="Ask Delhi Explorer AI Copilot"
           className="flex flex-col items-center justify-center py-1.5 px-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md active:scale-95 transition-all"
         >
           <Sparkles className="w-4 h-4 text-amber-300" />
@@ -64,6 +67,7 @@ export function MobileBottomBar({
         <button
           onClick={onLocateUser}
           disabled={isLocating}
+          aria-label="Locate My GPS Location"
           className="flex flex-col items-center justify-center py-1.5 px-3 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95 transition-all disabled:opacity-50"
         >
           {isLocating ? (

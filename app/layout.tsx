@@ -22,8 +22,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
   themeColor: "#2563eb",
 };
 
@@ -37,15 +36,20 @@ export default function RootLayout({
       <head>
         <link rel="icon" type="image/png" href="/icon.png" />
         <link rel="apple-touch-icon" href="/brand/icon-192.png" />
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Delhi Explorer" />
+        <link
+          rel="preload"
+          as="image"
+          href="/brand/delhi-basemap.webp"
+          type="image/webp"
+          fetchPriority="high"
+        />
+        <link rel="preconnect" href="https://a.tile.openstreetmap.org" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://b.tile.openstreetmap.org" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://c.tile.openstreetmap.org" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://tile.openstreetmap.org" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://server.arcgisonline.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://api.open-meteo.com" />
-        <link rel="dns-prefetch" href="https://en.wikipedia.org" />
-        <link rel="dns-prefetch" href="https://text.pollinations.ai" />
+        <link rel="dns-prefetch" href="https://router.project-osrm.org" />
       </head>
       <body className="antialiased select-none overflow-hidden">
         {children}

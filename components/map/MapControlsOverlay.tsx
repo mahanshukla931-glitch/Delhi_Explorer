@@ -157,6 +157,7 @@ export function MapControlsOverlay({
                   return (
                     <button
                       key={item.id}
+                      aria-label={`Switch to ${item.name} layer`}
                       onClick={() => {
                         onChangeLayer(item.id as LayerType);
                         setShowLayerMenu(false);

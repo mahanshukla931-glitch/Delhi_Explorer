@@ -105,7 +105,11 @@ export function MarkerClusterLayer({
           popupAnchor: [0, -height],
         });
 
-        const leafletMarker = L.marker(m.coordinates, { icon });
+        const leafletMarker = L.marker(m.coordinates, {
+          icon,
+          title: m.name,
+          alt: m.name,
+        });
 
         // Custom Google Maps style rich popup
         const popupHtml = `

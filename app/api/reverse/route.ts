@@ -116,13 +116,26 @@ export async function GET(request: NextRequest) {
     if (res.ok) {
       const data = await res.json();
       const address = data.address || {};
-      const street =
+      const rawStreet =
         address.road ||
         address.pedestrian ||
         address.neighbourhood ||
         address.suburb ||
         address.residential ||
         "";
+
+      // Filter out awkward raw transit / feeder infrastructure nodes (e.g. "Feeder Terminal #47")
+      const isUtilityOrTerminal =
+        /terminal|feeder|bus\s*stop|platform|gate\s*#|pillar\s*#|#\d+/i.test(rawStreet);
+
+      const cleanLocality =
+        (!isUtilityOrTerminal && rawStreet) ||
+        address.suburb ||
+        address.neighbourhood ||
+        address.city_district ||
+        address.city ||
+        "Delhi";
+
       const city =
         address.city ||
         address.town ||
@@ -130,11 +143,9 @@ export async function GET(request: NextRequest) {
         address.state_district ||
         address.state ||
         "Delhi";
-      const postcode = address.postcode || "";
 
       const shortAddress =
-        [street, city, postcode].filter(Boolean).join(", ") ||
-        data.display_name?.split(",").slice(0, 3).join(",") ||
+        [cleanLocality, city].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i).join(", ") ||
         "Delhi NCR";
 
       return NextResponse.json({

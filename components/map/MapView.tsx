@@ -17,18 +17,33 @@ import { MapLayers } from "./MapLayers";
 import { MapMarkers } from "./MapMarkers";
 import { MapControlsOverlay } from "./MapControlsOverlay";
 import { LocationMarker } from "./LocationMarker";
+import dynamic from "next/dynamic";
 import { MapEventsHandler } from "./MapEventsHandler";
 import { DelhiDistrictsGeoJson } from "./DelhiDistrictsGeoJson";
 import { MarkerClusterLayer } from "./MarkerClusterLayer";
-import { LeafletHeatLayer } from "./LeafletHeatLayer";
 import { DelhiMetroLayer } from "./DelhiMetroLayer";
 import { TrafficLayer } from "./TrafficLayer";
-import { GeomanDrawLayer } from "./GeomanDrawLayer";
 import { ReverseGeocodingHandler } from "./ReverseGeocodingHandler";
-import { NearbyMarkersLayer } from "./NearbyMarkersLayer";
-import { MapRouteLayer } from "./MapRouteLayer";
 import { MetroStation } from "@/lib/metroData";
 import { RouteData } from "@/types/routing";
+
+// Lazy-load heavy optional plugins so initial map bundle stays ultra-light
+const GeomanDrawLayer = dynamic(
+  () => import("./GeomanDrawLayer").then((m) => m.GeomanDrawLayer),
+  { ssr: false }
+);
+const LeafletHeatLayer = dynamic(
+  () => import("./LeafletHeatLayer").then((m) => m.LeafletHeatLayer),
+  { ssr: false }
+);
+const MapRouteLayer = dynamic(
+  () => import("./MapRouteLayer").then((m) => m.MapRouteLayer),
+  { ssr: false }
+);
+const NearbyMarkersLayer = dynamic(
+  () => import("./NearbyMarkersLayer").then((m) => m.NearbyMarkersLayer),
+  { ssr: false }
+);
 
 // Fix default Leaflet marker icon asset paths
 delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
@@ -198,7 +213,9 @@ export default function MapView({
         <TrafficLayer visible={showTraffic} />
 
         {/* Level 3: Geoman Drawing & Measurement Layer */}
-        <GeomanDrawLayer enabled={showDrawTools && !isNavSimActive} activeColor={activeDrawColor} />
+        {showDrawTools && !isNavSimActive && (
+          <GeomanDrawLayer enabled={showDrawTools && !isNavSimActive} activeColor={activeDrawColor} />
+        )}
 
         {/* Level 3: Reverse Geocoding Map Click Handler */}
         <ReverseGeocodingHandler

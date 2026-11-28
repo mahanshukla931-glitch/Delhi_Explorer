@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import {
   Search,
@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { DELHI_PRIMARY_LANDMARKS } from "@/lib/constants";
 import { LandmarkLocation } from "@/types/map";
+import { MarkerPoi } from "@/types/geojson";
 import { isLandmarkSaved, toggleLandmarkSaved } from "@/lib/bookmarks";
 import { DelhiWeatherWidget } from "@/components/ui/DelhiWeatherWidget";
 
@@ -52,6 +53,22 @@ interface GoogleMapsSearchCardProps {
   onToggleDrawTools?: () => void;
   onToggleNearbyPlaces?: () => void;
   isNearbyActive?: boolean;
+  selectedCategory?: string;
+  onSelectCategory?: (category: string) => void;
+  allMarkers?: MarkerPoi[];
+}
+
+interface UnifiedCategoryPlace {
+  id: string;
+  name: string;
+  category: string;
+  coordinates: [number, number];
+  description?: string;
+  rating?: number;
+  metroStation?: string;
+  imageUrl?: string;
+  address?: string;
+  isPrimaryLandmark?: boolean;
 }
 
 interface SearchResultItem {
@@ -103,9 +120,13 @@ export function GoogleMapsSearchCard({
   onToggleDrawTools,
   onToggleNearbyPlaces,
   isNearbyActive,
+  selectedCategory,
+  onSelectCategory,
+  allMarkers = [],
 }: GoogleMapsSearchCardProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [activeCategory, setActiveCategory] = useState<string>(selectedCategory || "all");
+  const [isCategoryTrayOpen, setIsCategoryTrayOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [liveResults, setLiveResults] = useState<SearchResultItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -114,6 +135,121 @@ export function GoogleMapsSearchCard({
   const [, setBookmarkRevision] = useState(0);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+
+  // Sync external category filter
+  useEffect(() => {
+    if (selectedCategory) {
+      setActiveCategory(selectedCategory);
+    }
+  }, [selectedCategory]);
+
+  const CATEGORY_PILLS = [
+    { id: "monument", label: "Monuments", icon: "🏛️" },
+    { id: "heritage", label: "Heritage", icon: "🏰" },
+    { id: "religious", label: "Religious", icon: "🛕" },
+    { id: "shopping", label: "Shopping", icon: "🛍️" },
+    { id: "food", label: "Food & Cafe", icon: "☕" },
+    { id: "park", label: "Parks", icon: "🌳" },
+    { id: "atm", label: "ATMs", icon: "🏧" },
+  ];
+
+  // Filter places for active category tray
+  const categoryPlaces = useMemo<UnifiedCategoryPlace[]>(() => {
+    if (activeCategory === "all") return [];
+
+    const matchedLandmarks = DELHI_PRIMARY_LANDMARKS.filter((lm) => {
+      const cat = lm.category as string;
+      if (activeCategory === "monument") return cat === "monument" || cat === "heritage";
+      if (activeCategory === "heritage") return cat === "heritage" || cat === "monument";
+      if (activeCategory === "religious") return cat === "religious";
+      if (activeCategory === "shopping") return cat === "commercial" || cat === "shopping";
+      return cat === activeCategory;
+    }).map((lm) => ({
+      id: lm.id,
+      name: lm.name,
+      category: lm.category,
+      coordinates: lm.coordinates,
+      description: lm.description,
+      rating: lm.rating,
+      metroStation: lm.metroStation,
+      imageUrl: lm.imageUrl,
+      address: lm.address,
+      isPrimaryLandmark: true,
+    }));
+
+    const matchedMarkers = (allMarkers || [])
+      .filter((m) => {
+        if (activeCategory === "monument") return m.category === "monument" || m.category === "heritage";
+        if (activeCategory === "heritage") return m.category === "monument" || m.category === "heritage";
+        if (activeCategory === "religious") return m.category === "religious";
+        if (activeCategory === "shopping") return m.category === "shopping" || m.category === "commercial";
+        if (activeCategory === "food") return m.category === "food";
+        if (activeCategory === "park") return m.category === "park";
+        if (activeCategory === "metro") return m.category === "metro";
+        if (activeCategory === "atm") return m.category === "atm";
+        return m.category === activeCategory;
+      })
+      .slice(0, 30)
+      .map((m) => ({
+        id: m.id,
+        name: m.name,
+        category: m.category,
+        coordinates: m.coordinates,
+        description: m.address,
+        rating: m.rating,
+        metroStation: m.hub,
+        imageUrl: undefined,
+        address: m.address,
+        isPrimaryLandmark: false,
+      }));
+
+    return [...matchedLandmarks, ...matchedMarkers];
+  }, [activeCategory, allMarkers]);
+
+  const handleSelectCategoryPlace = (place: UnifiedCategoryPlace) => {
+    onFlyTo(place.coordinates);
+    setIsCategoryTrayOpen(false);
+    if (place.isPrimaryLandmark) {
+      const fullLandmark = DELHI_PRIMARY_LANDMARKS.find((l) => l.id === place.id);
+      if (fullLandmark) {
+        onSelectLandmark(fullLandmark);
+        return;
+      }
+    }
+    const validCategory: LandmarkLocation["category"] =
+      place.category === "commercial" || place.category === "shopping"
+        ? "commercial"
+        : place.category === "heritage"
+        ? "heritage"
+        : place.category === "religious"
+        ? "religious"
+        : "monument";
+
+    onSelectLandmark({
+      id: place.id,
+      name: place.name,
+      category: validCategory,
+      coordinates: place.coordinates,
+      description: place.description || `${place.name} is a key destination in Delhi.`,
+      highlights: ["Delhi Explorer Discovery"],
+      rating: place.rating,
+      metroStation: place.metroStation,
+      imageUrl: place.imageUrl,
+    });
+  };
+
+  const handleCategoryClick = (categoryId: string) => {
+    const next = activeCategory === categoryId ? "all" : categoryId;
+    setActiveCategory(next);
+    onSelectCategory?.(next);
+
+    if (next === "all") {
+      setIsCategoryTrayOpen(false);
+    } else {
+      setIsCategoryTrayOpen(true);
+      if (selectedLandmark) onSelectLandmark(null);
+    }
+  };
 
   // Re-render when bookmarks are updated anywhere
   useEffect(() => {
@@ -348,6 +484,7 @@ export function GoogleMapsSearchCard({
           {/* Input */}
           <input
             type="text"
+            aria-label="Search Delhi Explorer"
             placeholder={isListening ? "Listening... Speak now" : "Search Delhi Explorer..."}
             value={searchQuery}
             onChange={(e) => {
@@ -421,6 +558,7 @@ export function GoogleMapsSearchCard({
                 }}
                 className="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 flex items-center justify-center transition-all duration-150 hover:scale-105 active:scale-95 shrink-0"
                 title="Search"
+                aria-label="Search"
               >
                 <Search className="w-4 h-4" strokeWidth={2.2} />
               </button>
@@ -432,6 +570,7 @@ export function GoogleMapsSearchCard({
             <button
               onClick={onToggleMenu}
               title="Delhi Explorer Menu"
+              aria-label="Delhi Explorer Menu"
               className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 dark:border-slate-600 shrink-0 hover:scale-105 transition-transform bg-white dark:bg-slate-800 p-0.5"
             >
               <Image
@@ -446,7 +585,7 @@ export function GoogleMapsSearchCard({
         </div>
       </div>
 
-      {/* 2. Sleek Horizontal Category Chips */}
+      {/* 2. Sleek Horizontal Category & Tool Pills (Pahle jaisa compact design, 100% working) */}
       <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto py-1 px-0.5 max-w-[calc(100vw-24px)] scrollbar-none no-scrollbar select-none">
         {/* Mobile-only Live Weather Pill Chip */}
         {weatherLocation && (
@@ -460,10 +599,11 @@ export function GoogleMapsSearchCard({
           </div>
         )}
 
-        {/* Level 4: Heatmap Toggle Chip */}
+        {/* 1. Level 4: Heatmap Toggle Chip (Starting at front per user request) */}
         {onToggleHeatmap && (
           <button
             onClick={onToggleHeatmap}
+            aria-label="Toggle Heatmap"
             className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
               showHeatmap
                 ? "bg-gradient-to-r from-orange-500 to-rose-600 text-white ring-2 ring-rose-400/40"
@@ -475,10 +615,11 @@ export function GoogleMapsSearchCard({
           </button>
         )}
 
-        {/* Live Delhi Traffic Chip */}
+        {/* 2. Live Delhi Traffic Chip */}
         {onToggleTraffic && (
           <button
             onClick={onToggleTraffic}
+            aria-label="Toggle Traffic"
             className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
               showTraffic
                 ? "bg-rose-600 text-white ring-2 ring-rose-400/40"
@@ -490,10 +631,11 @@ export function GoogleMapsSearchCard({
           </button>
         )}
 
-        {/* 1. Level 3: Geoman Drawing & Measurement Tools Chip (Prominent) */}
+        {/* 3. Level 3: Geoman Drawing & Measurement Tools Chip */}
         {onToggleDrawTools && (
           <button
             onClick={onToggleDrawTools}
+            aria-label="Toggle Draw Tools"
             className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
               showDrawTools
                 ? "bg-purple-600 text-white ring-2 ring-purple-400/40"
@@ -505,10 +647,11 @@ export function GoogleMapsSearchCard({
           </button>
         )}
 
-        {/* 2. Level 3: Overpass API Find Nearby Chip (Prominent) */}
+        {/* 4. Level 3: Overpass API Find Nearby Chip */}
         {onToggleNearbyPlaces && (
           <button
             onClick={onToggleNearbyPlaces}
+            aria-label="Find Nearby Places"
             className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
               isNearbyActive
                 ? "bg-emerald-600 text-white ring-2 ring-emerald-400/40"
@@ -520,10 +663,12 @@ export function GoogleMapsSearchCard({
           </button>
         )}
 
-        {/* 3. Delhi 11 Districts GeoJSON Chip */}
+        {/* 5. Delhi 11 Districts GeoJSON Chip */}
         {onToggleDistricts && (
           <button
+            type="button"
             onClick={onToggleDistricts}
+            aria-label="Toggle Delhi Districts"
             className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
               showDistricts
                 ? "bg-indigo-600 text-white ring-2 ring-indigo-400/40"
@@ -535,11 +680,13 @@ export function GoogleMapsSearchCard({
           </button>
         )}
 
-        {/* 4. Level 2 Places Directory Chip (Desktop visible; on mobile accessible via bottom bar) */}
+        {/* 6. Level 2: 1,200 Places Directory Chip (Directly after Districts per user request) */}
         {onTogglePlacesExplorer && (
           <button
+            type="button"
             onClick={onTogglePlacesExplorer}
-            className={`hidden sm:flex px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
+            aria-label="Explore 1,200 Places"
+            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
               showPlacesExplorer
                 ? "bg-blue-600 text-white ring-2 ring-blue-400/40"
                 : "bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50"
@@ -550,11 +697,13 @@ export function GoogleMapsSearchCard({
           </button>
         )}
 
-        {/* 5. Delhi Metro Network Chip (Desktop visible; on mobile accessible via bottom bar) */}
+        {/* 7. Delhi Metro Network Chip (Directly after 1,200 Places per user request) */}
         {onToggleMetroLines && (
           <button
+            type="button"
             onClick={onToggleMetroLines}
-            className={`hidden sm:flex px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
+            aria-label="Delhi Metro Network"
+            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
               showMetroLines
                 ? "bg-amber-500 text-white ring-2 ring-amber-300/40"
                 : "bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50"
@@ -565,30 +714,145 @@ export function GoogleMapsSearchCard({
           </button>
         )}
 
-        {/* 4. Filter categories (Monuments, Heritage, Religious, Shopping) */}
-        {categories
-          .filter((cat) => cat.id !== "all")
-          .map((cat) => {
-            const isSelected = activeCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => {
-                  setActiveCategory(isSelected ? "all" : cat.id);
-                  if (selectedLandmark) onSelectLandmark(null);
-                }}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all shadow-xs flex items-center gap-1.5 shrink-0 active:scale-95 ${
-                  isSelected
-                    ? "bg-blue-600 text-white font-bold shadow-md ring-2 ring-blue-400/30"
-                    : "bg-white dark:bg-[#202124] text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-700/70"
-                }`}
-              >
-                <span className="text-xs">{cat.icon}</span>
-                <span>{cat.label}</span>
-              </button>
-            );
-          })}
+        {/* Divider between Map Tools and Categories */}
+        <div className="w-px h-5 bg-slate-300 dark:bg-slate-700 shrink-0 mx-0.5" />
+
+        {/* Category Pills (Monuments, Heritage, Religious, Shopping, Food, Parks, ATMs) */}
+        {CATEGORY_PILLS.map((cat) => {
+          const isSelected = activeCategory === cat.id;
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              aria-label={`Category ${cat.label}`}
+              onClick={() => handleCategoryClick(cat.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all shadow-xs flex items-center gap-1.5 shrink-0 active:scale-95 ${
+                isSelected
+                  ? "bg-blue-600 text-white font-bold shadow-md ring-2 ring-blue-400/30"
+                  : "bg-white dark:bg-[#202124] text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-700/70"
+              }`}
+            >
+              <span className="text-xs">{cat.icon}</span>
+              <span>{cat.label}</span>
+            </button>
+          );
+        })}
       </div>
+
+      {/* 4. Category Places Results Tray (Opens immediately when a category is tapped) */}
+      {isCategoryTrayOpen && activeCategory !== "all" && (
+        <div className="pointer-events-auto bg-white/95 dark:bg-[#202124]/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/90 dark:border-slate-700/70 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-[55vh] flex flex-col">
+          {/* Header */}
+          <div className="p-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">
+                {CATEGORY_PILLS.find((c) => c.id === activeCategory)?.icon || "📍"}
+              </span>
+              <div>
+                <h3 className="text-xs font-bold capitalize leading-tight">
+                  {CATEGORY_PILLS.find((c) => c.id === activeCategory)?.label || activeCategory}
+                </h3>
+                <p className="text-[10px] text-blue-100">
+                  {categoryPlaces.length} places discovered in Delhi
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveCategory("all");
+                  onSelectCategory?.("all");
+                  setIsCategoryTrayOpen(false);
+                }}
+                className="text-[10px] px-2 py-1 rounded-md bg-white/20 hover:bg-white/30 text-white font-semibold transition-colors"
+              >
+                Show All
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsCategoryTrayOpen(false)}
+                className="p-1 rounded-full hover:bg-white/20 text-white transition-colors"
+                title="Close tray"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* List of Places */}
+          <div className="p-2 overflow-y-auto space-y-1.5 max-h-[45vh] scrollbar-thin">
+            {categoryPlaces.length === 0 ? (
+              <div className="p-6 text-center text-xs text-slate-500 dark:text-slate-400">
+                No places found in this category.
+              </div>
+            ) : (
+              categoryPlaces.map((place) => (
+                <div
+                  key={place.id}
+                  onClick={() => handleSelectCategoryPlace(place)}
+                  className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between gap-2.5 transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    {place.imageUrl && !brokenImages[place.id] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={place.imageUrl}
+                        alt={place.name}
+                        onError={() => setBrokenImages((prev) => ({ ...prev, [place.id]: true }))}
+                        className="w-11 h-11 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-slate-700"
+                      />
+                    ) : (
+                      <div className="w-11 h-11 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 flex items-center justify-center shrink-0 text-base font-bold">
+                        {CATEGORY_PILLS.find((c) => c.id === activeCategory)?.icon || "📍"}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                          {place.name}
+                        </h4>
+                        {place.rating && (
+                          <span className="flex items-center gap-0.5 text-[10px] font-bold text-amber-500 shrink-0">
+                            <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                            {place.rating}
+                          </span>
+                        )}
+                      </div>
+                      {(place.metroStation || place.address) && (
+                        <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                          {place.metroStation && (
+                            <>
+                              <Train className="w-3 h-3 text-amber-500 shrink-0" />
+                              <span className="truncate">{place.metroStation}</span>
+                            </>
+                          )}
+                          {!place.metroStation && place.address && (
+                            <span className="truncate">{place.address}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Directions Action Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRequestDirections?.(place.coordinates, place.name);
+                    }}
+                    className="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white shrink-0 shadow-xs transition-colors"
+                    title={`Get Directions to ${place.name}`}
+                  >
+                    <Navigation className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 3. Floating Place Details Card */}
       {selectedLandmark && (

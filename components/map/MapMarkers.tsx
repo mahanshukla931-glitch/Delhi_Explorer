@@ -79,6 +79,8 @@ export function MapMarkers({
             key={loc.id}
             position={loc.coordinates}
             icon={icon}
+            title={loc.name}
+            alt={loc.name}
             eventHandlers={{
               click: () => onSelectLandmark(loc),
             }}

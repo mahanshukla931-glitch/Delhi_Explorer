@@ -3,25 +3,54 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { GoogleMapsSearchCard } from "@/components/ui/GoogleMapsSearchCard";
-import { GoogleMapsDrawer } from "@/components/ui/GoogleMapsDrawer";
-import { AskMapsModal } from "@/components/ui/AskMapsModal";
 import { DelhiWeatherWidget } from "@/components/ui/DelhiWeatherWidget";
 import { MapLoadingSkeleton } from "@/components/ui/MapLoadingSkeleton";
 import { MapErrorBoundary } from "@/components/ui/MapErrorBoundary";
-import { Sidebar } from "@/components/sidebar/Sidebar";
 import { ChoroplethLegend } from "@/components/ui/ChoroplethLegend";
-import { ShareModal } from "@/components/ui/ShareModal";
 import { MobileBottomBar } from "@/components/ui/MobileBottomBar";
-import { DirectionsDrawer } from "@/components/ui/DirectionsDrawer";
-import { NearbyPlacesDrawer } from "@/components/ui/NearbyPlacesDrawer";
-import { DrawToolsFloatingBar } from "@/components/ui/DrawToolsFloatingBar";
-import { NavigationSimulationBanner } from "@/components/ui/NavigationSimulationBanner";
 import { NearbyPlaceItem } from "@/components/map/NearbyMarkersLayer";
 import { MetroStation } from "@/lib/metroData";
 import { RouteData, TravelMode } from "@/types/routing";
 import { LayerType, LandmarkLocation, UserLocationState } from "@/types/map";
 import { DistrictProperties, MarkerPoi } from "@/types/geojson";
 import { DELHI_PRIMARY_LANDMARKS } from "@/lib/constants";
+
+// Lazy-load drawers, modals & heavy tool components to minimize initial JS bundle
+const GoogleMapsDrawer = dynamic(
+  () => import("@/components/ui/GoogleMapsDrawer").then((m) => m.GoogleMapsDrawer),
+  { ssr: false }
+);
+const AskMapsModal = dynamic(
+  () => import("@/components/ui/AskMapsModal").then((m) => m.AskMapsModal),
+  { ssr: false }
+);
+const Sidebar = dynamic(
+  () => import("@/components/sidebar/Sidebar").then((m) => m.Sidebar),
+  { ssr: false }
+);
+const ShareModal = dynamic(
+  () => import("@/components/ui/ShareModal").then((m) => m.ShareModal),
+  { ssr: false }
+);
+const DirectionsDrawer = dynamic(
+  () => import("@/components/ui/DirectionsDrawer").then((m) => m.DirectionsDrawer),
+  { ssr: false }
+);
+const NearbyPlacesDrawer = dynamic(
+  () => import("@/components/ui/NearbyPlacesDrawer").then((m) => m.NearbyPlacesDrawer),
+  { ssr: false }
+);
+const DrawToolsFloatingBar = dynamic(
+  () => import("@/components/ui/DrawToolsFloatingBar").then((m) => m.DrawToolsFloatingBar),
+  { ssr: false }
+);
+const NavigationSimulationBanner = dynamic(
+  () =>
+    import("@/components/ui/NavigationSimulationBanner").then(
+      (m) => m.NavigationSimulationBanner
+    ),
+  { ssr: false }
+);
 
 // Client-only dynamic import of MapView to avoid SSR issues
 const DynamicMapView = dynamic(() => import("@/components/map/MapView"), {
@@ -122,29 +151,49 @@ export default function Home() {
     error: null,
   });
 
-  // Level 2: Fetch 1,200+ Marker records from typed Next.js API route (/api/markers)
+  // Level 2: Fetch 1,200+ Marker records (Deferred to requestIdleCallback for ultra-fast LCP & TBT)
   useEffect(() => {
-    fetch("/api/markers")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load markers");
-        return res.json();
-      })
-      .then((data) => {
-        if (data && data.markers) {
-          setAllMarkers(data.markers);
-          setFilteredMarkers(data.markers);
-          const counts: Record<string, number> = {};
-          if (data.categories) {
-            data.categories.forEach((c: { id: string; count: number }) => {
-              counts[c.id] = c.count;
-            });
+    let cancelled = false;
+
+    const loadMarkers = () => {
+      if (cancelled) return;
+      fetch("/api/markers")
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to load markers");
+          return res.json();
+        })
+        .then((data) => {
+          if (cancelled) return;
+          if (data && data.markers) {
+            setAllMarkers(data.markers);
+            setFilteredMarkers(data.markers);
+            const counts: Record<string, number> = {};
+            if (data.categories) {
+              data.categories.forEach((c: { id: string; count: number }) => {
+                counts[c.id] = c.count;
+              });
+            }
+            setCategoryCounts(counts);
           }
-          setCategoryCounts(counts);
-        }
-      })
-      .catch((err) => {
-        console.error("Markers API error:", err);
-      });
+        })
+        .catch((err) => {
+          console.error("Markers API error:", err);
+        });
+    };
+
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      const handle = (window as Window & { requestIdleCallback: (cb: () => void, opts: { timeout: number }) => number }).requestIdleCallback(loadMarkers, { timeout: 1500 });
+      return () => {
+        cancelled = true;
+        (window as Window & { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(handle);
+      };
+    } else {
+      const timer = setTimeout(loadMarkers, 600);
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
+    }
   }, []);
 
   // Level 2 Pro: Bi-directional filtering on Category, District, Open Now, Search Query, & Sorting
@@ -152,7 +201,13 @@ export default function Home() {
     let result = [...allMarkers];
 
     if (sidebarCategory !== "all") {
-      result = result.filter((m) => m.category === sidebarCategory);
+      if (sidebarCategory === "heritage") {
+        result = result.filter((m) => m.category === "heritage" || m.category === "monument");
+      } else if (sidebarCategory === "monument") {
+        result = result.filter((m) => m.category === "monument" || m.category === "heritage");
+      } else {
+        result = result.filter((m) => m.category === sidebarCategory);
+      }
     }
 
     if (activeDistrictFilter) {
@@ -201,9 +256,33 @@ export default function Home() {
     ).length;
   }, [selectedDistrict, allMarkers]);
 
+  // Dedicated handler for toggling 1,200 Places Explorer ensuring immediate dataset load
+  const handleTogglePlacesExplorer = useCallback(() => {
+    if (allMarkers.length === 0) {
+      fetch("/api/markers")
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to load markers");
+          return res.json();
+        })
+        .then((data) => {
+          if (data && data.markers) {
+            setAllMarkers(data.markers);
+            setFilteredMarkers(data.markers);
+            const counts: Record<string, number> = {};
+            data.markers.forEach((m: MarkerPoi) => {
+              counts[m.category] = (counts[m.category] || 0) + 1;
+            });
+            setCategoryCounts(counts);
+          }
+        })
+        .catch(console.error);
+    }
+    setIsPlacesExplorerOpen((prev) => !prev);
+  }, [allMarkers.length]);
+
   const handleViewDistrictPlaces = (districtName: string) => {
     setActiveDistrictFilter(districtName);
-    setIsPlacesExplorerOpen(true);
+    handleTogglePlacesExplorer();
   };
 
   // Bulletproof user GPS auto-detect and locate function with two-phase fallback
@@ -536,7 +615,7 @@ export default function Home() {
         showMetroLines={showMetroLines}
         onToggleMetroLines={() => setShowMetroLines((prev) => !prev)}
         showPlacesExplorer={isPlacesExplorerOpen}
-        onTogglePlacesExplorer={() => setIsPlacesExplorerOpen((prev) => !prev)}
+        onTogglePlacesExplorer={handleTogglePlacesExplorer}
         totalMarkersCount={allMarkers.length || 1200}
         onOpenShare={handleOpenShare}
         onRequestDirections={(coords, name) => handleCalculateRoute(coords, name)}
@@ -548,6 +627,9 @@ export default function Home() {
         onToggleDrawTools={() => setShowDrawTools((prev) => !prev)}
         onToggleNearbyPlaces={() => setIsNearbyDrawerOpen((prev) => !prev)}
         isNearbyActive={isNearbyDrawerOpen || nearbyPlaces.length > 0}
+        selectedCategory={sidebarCategory}
+        onSelectCategory={setSidebarCategory}
+        allMarkers={allMarkers}
       />
 
       {/* Top-Right Dynamic Weather & Air Quality Widget (Desktop View only) */}
@@ -572,61 +654,67 @@ export default function Home() {
       />
 
       {/* Level 2 Pro: Places Explorer Sidebar with Sorting & Open Now Filter */}
-      <Sidebar
-        markers={filteredMarkers}
-        selectedMarkerId={selectedClusterMarker?.id || null}
-        onSelectMarker={handleSelectClusterMarker}
-        isOpen={isPlacesExplorerOpen}
-        onClose={() => setIsPlacesExplorerOpen(false)}
-        selectedCategory={sidebarCategory}
-        onSelectCategory={setSidebarCategory}
-        searchQuery={sidebarSearch}
-        onSearchChange={setSidebarSearch}
-        totalCount={allMarkers.length || 1200}
-        categoryCounts={categoryCounts}
-        activeDistrictFilter={activeDistrictFilter}
-        onClearDistrictFilter={() => setActiveDistrictFilter(null)}
-        sortBy={sortBy}
-        onSortChange={setSortBy}
-        isOpenNowOnly={isOpenNowOnly}
-        onToggleOpenNowOnly={() => setIsOpenNowOnly((prev) => !prev)}
-      />
+      {isPlacesExplorerOpen && (
+        <Sidebar
+          markers={filteredMarkers}
+          selectedMarkerId={selectedClusterMarker?.id || null}
+          onSelectMarker={handleSelectClusterMarker}
+          isOpen={isPlacesExplorerOpen}
+          onClose={() => setIsPlacesExplorerOpen(false)}
+          selectedCategory={sidebarCategory}
+          onSelectCategory={setSidebarCategory}
+          searchQuery={sidebarSearch}
+          onSearchChange={setSidebarSearch}
+          totalCount={allMarkers.length || 1200}
+          categoryCounts={categoryCounts}
+          activeDistrictFilter={activeDistrictFilter}
+          onClearDistrictFilter={() => setActiveDistrictFilter(null)}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+          isOpenNowOnly={isOpenNowOnly}
+          onToggleOpenNowOnly={() => setIsOpenNowOnly((prev) => !prev)}
+        />
+      )}
 
       {/* Hamburger Navigation Drawer */}
-      <GoogleMapsDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        activeLayer={activeLayer}
-        onChangeLayer={setActiveLayer}
-        isDarkMode={isDarkMode}
-        onToggleDarkMode={handleToggleDarkMode}
-        onOpenAskMaps={() => setIsAskMapsOpen(true)}
-        showDistricts={showDistrictsGeoJson}
-        onToggleDistricts={() => setShowDistrictsGeoJson((prev) => !prev)}
-        showMarkerClusters={showMarkerClusters}
-        onToggleMarkerClusters={() => setShowMarkerClusters((prev) => !prev)}
-        showMetroLines={showMetroLines}
-        onToggleMetroLines={() => setShowMetroLines((prev) => !prev)}
-        onOpenPlacesExplorer={() => setIsPlacesExplorerOpen(true)}
-        totalMarkersCount={allMarkers.length || 1200}
-        showTraffic={showTraffic}
-        onToggleTraffic={() => setShowTraffic((prev) => !prev)}
-        showHeatmap={showHeatmap}
-        onToggleHeatmap={() => setShowHeatmap((prev) => !prev)}
-        showDrawTools={showDrawTools}
-        onToggleDrawTools={() => setShowDrawTools((prev) => !prev)}
-        onOpenNearby={() => setIsNearbyDrawerOpen(true)}
-      />
+      {isDrawerOpen && (
+        <GoogleMapsDrawer
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+          activeLayer={activeLayer}
+          onChangeLayer={setActiveLayer}
+          isDarkMode={isDarkMode}
+          onToggleDarkMode={handleToggleDarkMode}
+          onOpenAskMaps={() => setIsAskMapsOpen(true)}
+          showDistricts={showDistrictsGeoJson}
+          onToggleDistricts={() => setShowDistrictsGeoJson((prev) => !prev)}
+          showMarkerClusters={showMarkerClusters}
+          onToggleMarkerClusters={() => setShowMarkerClusters((prev) => !prev)}
+          showMetroLines={showMetroLines}
+          onToggleMetroLines={() => setShowMetroLines((prev) => !prev)}
+          onOpenPlacesExplorer={handleTogglePlacesExplorer}
+          totalMarkersCount={allMarkers.length || 1200}
+          showTraffic={showTraffic}
+          onToggleTraffic={() => setShowTraffic((prev) => !prev)}
+          showHeatmap={showHeatmap}
+          onToggleHeatmap={() => setShowHeatmap((prev) => !prev)}
+          showDrawTools={showDrawTools}
+          onToggleDrawTools={() => setShowDrawTools((prev) => !prev)}
+          onOpenNearby={() => setIsNearbyDrawerOpen(true)}
+        />
+      )}
 
       {/* Dedicated Delhi Explorer AI Panel */}
-      <AskMapsModal
-        isOpen={isAskMapsOpen}
-        onClose={() => setIsAskMapsOpen(false)}
-        onFlyToCoords={(coords) => setFlyToCoords(coords)}
-        currentLocationName={weatherLocation.name}
-        userCoordinates={weatherLocation.coords}
-        selectedLandmark={selectedLandmark}
-      />
+      {isAskMapsOpen && (
+        <AskMapsModal
+          isOpen={isAskMapsOpen}
+          onClose={() => setIsAskMapsOpen(false)}
+          onFlyToCoords={(coords) => setFlyToCoords(coords)}
+          currentLocationName={weatherLocation.name}
+          userCoordinates={weatherLocation.coords}
+          selectedLandmark={selectedLandmark}
+        />
+      )}
 
       {/* Level 2 Pro: Floating Places Filter Active Banner */}
       {(filteredMarkers.length < allMarkers.length || activeDistrictFilter || isOpenNowOnly) && (
@@ -667,6 +755,17 @@ export default function Home() {
 
       {/* Full-screen Leaflet Map Canvas */}
       <main className="w-full h-full relative">
+        {/* Instant SSR Basemap Paint for LCP < 1.0s */}
+        <div className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/delhi-basemap.webp"
+            alt="Delhi Map Base"
+            width={768}
+            height={768}
+            className="w-full h-full object-cover opacity-60 dark:opacity-40"
+          />
+        </div>
         <MapErrorBoundary fallbackTitle="Map Rendering Error">
           <DynamicMapView
             activeLayer={activeLayer}
@@ -713,18 +812,20 @@ export default function Home() {
       </main>
 
       {/* Level 3 Pro: Floating GeoJSON Export/Import & Color Palette Management Bar */}
-      <DrawToolsFloatingBar
-        isOpen={showDrawTools}
-        onClose={() => setShowDrawTools(false)}
-        activeColor={activeDrawColor}
-        onChangeColor={setActiveDrawColor}
-        onShapesImported={(count) =>
-          setErrorNotice(`Successfully imported ${count} shape(s) from GeoJSON!`)
-        }
-      />
+      {showDrawTools && (
+        <DrawToolsFloatingBar
+          isOpen={showDrawTools}
+          onClose={() => setShowDrawTools(false)}
+          activeColor={activeDrawColor}
+          onChangeColor={setActiveDrawColor}
+          onShapesImported={(count) =>
+            setErrorNotice(`Successfully imported ${count} shape(s) from GeoJSON!`)
+          }
+        />
+      )}
 
       {/* Level 3 Pro: Google Maps Style Turn-by-Turn GPS Navigation Preview Banner */}
-      {activeRoute && (
+      {activeRoute && isNavSimActive && (
         <NavigationSimulationBanner
           route={activeRoute}
           isActive={isNavSimActive}
@@ -745,64 +846,68 @@ export default function Home() {
       )}
 
       {/* Level 3: Overpass API Find Nearby Drawer */}
-      <NearbyPlacesDrawer
-        isOpen={isNearbyDrawerOpen}
-        onClose={() => setIsNearbyDrawerOpen(false)}
-        centerCoords={currentMapCenter}
-        onSearchNearby={(cat, rad) => handleSearchNearby(cat, rad)}
-        isLoading={isNearbyLoading}
-        places={nearbyPlaces}
-        error={nearbyError}
-        onSelectPlace={(p) => setFlyToCoords(p.coordinates)}
-        onRequestDirections={(coords, name) => handleCalculateRoute(coords, name)}
-        onClearPlaces={() => setNearbyPlaces([])}
-        activeCategory={nearbyCategory}
-        setActiveCategory={setNearbyCategory}
-        activeRadius={nearbyRadius}
-        setActiveRadius={setNearbyRadius}
-      />
+      {isNearbyDrawerOpen && (
+        <NearbyPlacesDrawer
+          isOpen={isNearbyDrawerOpen}
+          onClose={() => setIsNearbyDrawerOpen(false)}
+          centerCoords={currentMapCenter}
+          onSearchNearby={(cat, rad) => handleSearchNearby(cat, rad)}
+          isLoading={isNearbyLoading}
+          places={nearbyPlaces}
+          error={nearbyError}
+          onSelectPlace={(p) => setFlyToCoords(p.coordinates)}
+          onRequestDirections={(coords, name) => handleCalculateRoute(coords, name)}
+          onClearPlaces={() => setNearbyPlaces([])}
+          activeCategory={nearbyCategory}
+          setActiveCategory={setNearbyCategory}
+          activeRadius={nearbyRadius}
+          setActiveRadius={setNearbyRadius}
+        />
+      )}
 
       {/* Level 3: Turn-by-Turn Navigation & Routing Drawer */}
-      <DirectionsDrawer
-        route={activeRoute}
-        isOpen={isDirectionsDrawerOpen}
-        userLocation={userLocation}
-        onClose={() => {
-          setIsDirectionsDrawerOpen(false);
-          setActiveRoute(null);
-          setIsNavSimActive(false);
-          setNavSimPosition(null);
-        }}
-        onChangeMode={(mode) => {
-          if (activeRoute) {
+      {isDirectionsDrawerOpen && (
+        <DirectionsDrawer
+          route={activeRoute}
+          isOpen={isDirectionsDrawerOpen}
+          userLocation={userLocation}
+          onClose={() => {
+            setIsDirectionsDrawerOpen(false);
+            setActiveRoute(null);
+            setIsNavSimActive(false);
+            setNavSimPosition(null);
+          }}
+          onChangeMode={(mode) => {
+            if (activeRoute) {
+              handleCalculateRoute(
+                activeRoute.destinationCoords,
+                activeRoute.destinationName,
+                mode,
+                activeRoute.originCoords,
+                activeRoute.originName
+              );
+            }
+          }}
+          onUpdateRoute={(startCoords, destCoords, startName, destName, mode) => {
             handleCalculateRoute(
-              activeRoute.destinationCoords,
-              activeRoute.destinationName,
-              mode,
-              activeRoute.originCoords,
-              activeRoute.originName
+              destCoords,
+              destName,
+              mode || activeRoute?.mode || "driving",
+              startCoords,
+              startName
             );
-          }
-        }}
-        onUpdateRoute={(startCoords, destCoords, startName, destName, mode) => {
-          handleCalculateRoute(
-            destCoords,
-            destName,
-            mode || activeRoute?.mode || "driving",
-            startCoords,
-            startName
-          );
-        }}
-        isLoading={isRoutingLoading}
-        onStartNavigation={() => {
-          setIsDirectionsDrawerOpen(false);
-          setIsNavSimActive(true);
-        }}
-      />
+          }}
+          isLoading={isRoutingLoading}
+          onStartNavigation={() => {
+            setIsDirectionsDrawerOpen(false);
+            setIsNavSimActive(true);
+          }}
+        />
+      )}
 
       {/* Modern Mobile Bottom Bar */}
       <MobileBottomBar
-        onOpenPlacesExplorer={() => setIsPlacesExplorerOpen(true)}
+        onOpenPlacesExplorer={handleTogglePlacesExplorer}
         onOpenAi={() => setIsAskMapsOpen(true)}
         showMetroLines={showMetroLines}
         onToggleMetroLines={() => setShowMetroLines((prev) => !prev)}
@@ -811,13 +916,15 @@ export default function Home() {
       />
 
       {/* 1-Click WhatsApp & Web Share Modal */}
-      <ShareModal
-        isOpen={shareModalData.isOpen}
-        onClose={() => setShareModalData((prev) => ({ ...prev, isOpen: false }))}
-        title={shareModalData.title}
-        shareUrl={shareModalData.url}
-        description={shareModalData.description}
-      />
+      {shareModalData.isOpen && (
+        <ShareModal
+          isOpen={shareModalData.isOpen}
+          onClose={() => setShareModalData((prev) => ({ ...prev, isOpen: false }))}
+          title={shareModalData.title}
+          shareUrl={shareModalData.url}
+          description={shareModalData.description}
+        />
+      )}
     </div>
   );
 }

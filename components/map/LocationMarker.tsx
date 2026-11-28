@@ -30,7 +30,7 @@ export function LocationMarker({ userLocation }: LocationMarkerProps) {
 
   return (
     <>
-      <Marker position={userLocation.coords} icon={userIcon}>
+      <Marker position={userLocation.coords} icon={userIcon} title="My Current GPS Location" alt="My Current GPS Location">
         <Popup>
           <div className="text-xs p-1">
             <p className="font-bold text-blue-600 mb-1">📍 You Are Here</p>
