@@ -5,6 +5,10 @@ import {
   Navigation,
   X,
   CornerUpRight,
+  CornerUpLeft,
+  ArrowUp,
+  RotateCw,
+  GitFork,
   Gauge,
   CheckCircle,
 } from "lucide-react";
@@ -15,6 +19,23 @@ interface NavigationSimulationBannerProps {
   isActive: boolean;
   onExit: () => void;
   onPositionUpdate?: (coords: [number, number]) => void;
+}
+
+// Helper to pick accurate maneuver turn icon based on OSRM type and modifier
+function getManeuverIcon(type?: string, modifier?: string) {
+  if (modifier?.includes("left")) {
+    return <CornerUpLeft className="w-6 h-6 text-white stroke-[2.5]" />;
+  }
+  if (modifier?.includes("right")) {
+    return <CornerUpRight className="w-6 h-6 text-white stroke-[2.5]" />;
+  }
+  if (type === "roundabout" || type === "rotary" || type === "roundabout turn") {
+    return <RotateCw className="w-6 h-6 text-white stroke-[2.5]" />;
+  }
+  if (type === "fork") {
+    return <GitFork className="w-6 h-6 text-white stroke-[2.5]" />;
+  }
+  return <ArrowUp className="w-6 h-6 text-white stroke-[2.5]" />;
 }
 
 export function NavigationSimulationBanner({
@@ -50,7 +71,7 @@ export function NavigationSimulationBanner({
     }, 1200);
 
     return () => clearInterval(interval);
-  }, [isActive, route]);
+  }, [isActive, route, onPositionUpdate]);
 
   // Sync turn-by-turn step with progress
   useEffect(() => {
@@ -68,6 +89,13 @@ export function NavigationSimulationBanner({
   const currentStep = route.steps[currentStepIndex] || route.steps[0];
   const isArrived = currentCoordIndex >= route.coordinates.length - 1;
 
+  // Format step distance
+  const stepDistFormatted = currentStep?.distanceMeters
+    ? currentStep.distanceMeters > 1000
+      ? `${(currentStep.distanceMeters / 1000).toFixed(1)} km`
+      : `${currentStep.distanceMeters} m`
+    : "";
+
   return (
     <div className="fixed top-3 sm:top-5 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 z-50 sm:w-[500px] select-none animate-in fade-in slide-in-from-top-4 duration-250">
       <div className="bg-emerald-700 dark:bg-emerald-800 text-white rounded-3xl shadow-[0_10px_35px_rgba(0,0,0,0.35)] border border-emerald-500/50 p-3.5 sm:p-4">
@@ -78,23 +106,34 @@ export function NavigationSimulationBanner({
               {isArrived ? (
                 <CheckCircle className="w-6 h-6 text-emerald-200" />
               ) : (
-                <CornerUpRight className="w-6 h-6 text-white stroke-[2.5]" />
+                getManeuverIcon(currentStep?.type, currentStep?.modifier)
               )}
             </div>
 
             <div className="min-w-0 flex-1">
               <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-200 block">
-                {isArrived ? "Destination Reached" : "Next Maneuver"}
+                {isArrived
+                  ? "Destination Reached"
+                  : stepDistFormatted
+                  ? `In ${stepDistFormatted}`
+                  : "Next Maneuver"}
               </span>
               <h3 className="text-sm sm:text-base font-extrabold leading-tight text-white line-clamp-2">
-                {isArrived ? `You have arrived at ${route.destinationName}` : currentStep?.instruction}
+                {isArrived
+                  ? `You have arrived at ${route.destinationName}`
+                  : currentStep?.instruction}
               </h3>
+              {currentStep?.name && !isArrived && (
+                <span className="inline-block text-[11px] font-semibold text-emerald-200/90 truncate max-w-full mt-0.5">
+                  🛣️ {currentStep.name}
+                </span>
+              )}
             </div>
           </div>
 
           <button
             onClick={onExit}
-            className="p-1.5 rounded-full bg-black/20 hover:bg-black/40 text-white/90 hover:text-white transition-colors shrink-0"
+            className="p-1.5 rounded-full bg-black/20 hover:bg-black/40 text-white/90 hover:text-white transition-colors shrink-0 cursor-pointer"
             title="Exit Navigation"
             aria-label="Exit Navigation"
           >

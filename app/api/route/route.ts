@@ -154,106 +154,109 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Check direct distance: if user is > 150km away (e.g. user GPS in Bhopal/another state),
-    // public OSRM car router often times out or errors on extreme cross-country distances.
-    const directDistance = getHaversineDistance(sLat, sLng, eLat, eLng);
+    // OSRM profile mapping
+    const profile =
+      mode === "walking" ? "foot" : mode === "cycling" ? "bike" : "car";
 
-    if (directDistance <= 150000) {
-      // OSRM profile mapping
-      const profile =
-        mode === "walking" ? "foot" : mode === "cycling" ? "bike" : "car";
+    // OSRM expects coordinates as: lng,lat;lng,lat
+    const osrmUrl = `https://router.project-osrm.org/route/v1/${profile}/${sLng},${sLat};${eLng},${eLat}?overview=full&geometries=geojson&steps=true`;
 
-      // OSRM expects coordinates as: lng,lat;lng,lat
-      const osrmUrl = `https://router.project-osrm.org/route/v1/${profile}/${sLng},${sLat};${eLng},${eLat}?overview=full&geometries=geojson&steps=true`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 7000);
+    const res = await fetch(osrmUrl, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "DelhiExplorer/1.0",
+        Accept: "application/json",
+      },
+    });
 
-      const res = await fetch(osrmUrl, {
-        signal: controller.signal,
-        headers: {
-          "User-Agent": "DelhiExplorer/1.0",
-          Accept: "application/json",
-        },
-      });
+    clearTimeout(timeoutId);
 
-      clearTimeout(timeoutId);
+    if (res.ok) {
+      const data = await res.json();
 
-      if (res.ok) {
-        const data = await res.json();
-
-        if (data.routes && data.routes.length > 0) {
-          const primaryRoute = data.routes[0];
-          const coordinates: [number, number][] =
-            primaryRoute.geometry.coordinates.map(
-              (c: [number, number]) => [c[1], c[0]]
-            );
-
-          const distanceMeters: number = primaryRoute.distance;
-          const durationSeconds: number = primaryRoute.duration;
-
-          const distanceKm = (distanceMeters / 1000).toFixed(1);
-          const distanceText =
-            distanceMeters > 1000
-              ? `${distanceKm} km`
-              : `${Math.round(distanceMeters)} m`;
-
-          const mins = Math.round(durationSeconds / 60);
-          const hours = Math.floor(mins / 60);
-          const remainingMins = mins % 60;
-          const durationText =
-            hours > 0 ? `${hours} hr ${remainingMins} min` : `${mins} min`;
-
-          const steps = (primaryRoute.legs?.[0]?.steps || []).map(
-            (st: {
-              maneuver: {
-                instruction?: string;
-                type: string;
-                modifier?: string;
-                location: [number, number];
-              };
-              distance: number;
-              duration: number;
-              name: string;
-            }) => {
-              let instruction = st.maneuver.instruction;
-              if (!instruction) {
-                const type = st.maneuver.type;
-                const mod = st.maneuver.modifier;
-                const name = st.name || "the road";
-
-                if (type === "depart") instruction = `Head out on ${name}`;
-                else if (type === "arrive")
-                  instruction = `Arrive at your destination`;
-                else if (type === "turn")
-                  instruction = `Turn ${mod || "ahead"} onto ${name}`;
-                else if (type === "new name")
-                  instruction = `Continue onto ${name}`;
-                else instruction = `Proceed on ${name}`;
-              }
-
-              return {
-                instruction,
-                distanceMeters: Math.round(st.distance),
-                durationSeconds: Math.round(st.duration),
-                name: st.name || "",
-                type: st.maneuver.type,
-                modifier: st.maneuver.modifier,
-                coordinates: [st.maneuver.location[1], st.maneuver.location[0]],
-              };
-            }
+      if (data.routes && data.routes.length > 0) {
+        const primaryRoute = data.routes[0];
+        const coordinates: [number, number][] =
+          primaryRoute.geometry.coordinates.map(
+            (c: [number, number]) => [c[1], c[0]]
           );
 
-          return NextResponse.json({
-            coordinates,
-            distanceMeters,
-            durationSeconds,
-            distanceText,
-            durationText,
-            mode,
-            steps,
-          });
-        }
+        const distanceMeters: number = primaryRoute.distance;
+        const durationSeconds: number = primaryRoute.duration;
+
+        const distanceKm = (distanceMeters / 1000).toFixed(1);
+        const distanceText =
+          distanceMeters > 1000
+            ? `${distanceKm} km`
+            : `${Math.round(distanceMeters)} m`;
+
+        const mins = Math.round(durationSeconds / 60);
+        const hours = Math.floor(mins / 60);
+        const remainingMins = mins % 60;
+        const durationText =
+          hours > 0 ? `${hours} hr ${remainingMins} min` : `${mins} min`;
+
+        const steps = (primaryRoute.legs?.[0]?.steps || []).map(
+          (st: {
+            maneuver: {
+              instruction?: string;
+              type: string;
+              modifier?: string;
+              location: [number, number];
+            };
+            distance: number;
+            duration: number;
+            name: string;
+          }) => {
+            let instruction = st.maneuver.instruction;
+            const roadName = st.name ? `on ${st.name}` : "";
+            const mod = st.maneuver.modifier ? ` ${st.maneuver.modifier}` : "";
+
+            if (!instruction) {
+              const type = st.maneuver.type;
+              if (type === "depart") {
+                instruction = st.name ? `Head out onto ${st.name}` : "Head toward the main road";
+              } else if (type === "arrive") {
+                instruction = "Arrive at your destination";
+              } else if (type === "turn") {
+                instruction = `Turn${mod} ${roadName}`.trim();
+              } else if (type === "roundabout" || type === "rotary" || type === "roundabout turn") {
+                instruction = `Take roundabout${mod} ${roadName}`.trim();
+              } else if (type === "fork") {
+                instruction = `Take the fork${mod} ${roadName}`.trim();
+              } else if (type === "on ramp" || type === "off ramp") {
+                instruction = `Take the ramp ${roadName}`.trim();
+              } else if (type === "new name") {
+                instruction = `Continue straight ${roadName}`.trim();
+              } else {
+                instruction = `Proceed${mod} ${roadName}`.trim();
+              }
+            }
+
+            return {
+              instruction,
+              distanceMeters: Math.round(st.distance),
+              durationSeconds: Math.round(st.duration),
+              name: st.name || "",
+              type: st.maneuver.type,
+              modifier: st.maneuver.modifier,
+              coordinates: [st.maneuver.location[1], st.maneuver.location[0]],
+            };
+          }
+        );
+
+        return NextResponse.json({
+          coordinates,
+          distanceMeters,
+          durationSeconds,
+          distanceText,
+          durationText,
+          mode,
+          steps,
+        });
       }
     }
   } catch (error) {
