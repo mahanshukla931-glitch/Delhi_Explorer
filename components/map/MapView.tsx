@@ -207,8 +207,8 @@ export default function MapView({
           <LeafletHeatLayer markers={clusterMarkers} visible={showHeatmap} />
         )}
 
-        {/* Level 2: 1,200+ Marker Clustering Layer */}
-        {showMarkerClusters && clusterMarkers && clusterMarkers.length > 0 && (
+        {/* Level 2: 1,200+ Marker Clustering Layer (Hidden when Heatmap is active so heatmap glows clearly) */}
+        {!showHeatmap && showMarkerClusters && clusterMarkers && clusterMarkers.length > 0 && (
           <MarkerClusterLayer
             markers={clusterMarkers}
             selectedMarkerId={selectedClusterMarkerId}
