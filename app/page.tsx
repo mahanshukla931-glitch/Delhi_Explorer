@@ -433,6 +433,8 @@ export default function Home() {
     customOriginName?: string
   ) => {
     try {
+      // Auto-close landmark card so it doesn't overlap or block the screen on mobile
+      setSelectedLandmark(null);
       setIsRoutingLoading(true);
 
       // Determine starting point intelligently:

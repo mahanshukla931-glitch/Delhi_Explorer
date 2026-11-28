@@ -592,10 +592,10 @@ export function GoogleMapsSearchCard({
 
       {/* 3. Floating Place Details Card */}
       {selectedLandmark && (
-        <div className="pointer-events-auto bg-white dark:bg-[#202124] rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.25)] border border-slate-200/80 dark:border-slate-700/60 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-200">
+        <div className="pointer-events-auto bg-white dark:bg-[#202124] rounded-2xl shadow-[0_4px_25px_rgba(0,0,0,0.25)] border border-slate-200/80 dark:border-slate-700/60 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-200 max-h-[75vh] sm:max-h-[80vh] flex flex-col">
           {/* Real HD Photo Card Header */}
           {selectedLandmark.imageUrl && !brokenImages[selectedLandmark.id] ? (
-            <div className="h-36 relative overflow-hidden text-white group bg-slate-900">
+            <div className="h-32 sm:h-36 relative overflow-hidden text-white group bg-slate-900 shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={selectedLandmark.imageUrl}
@@ -677,7 +677,7 @@ export function GoogleMapsSearchCard({
               </div>
             </div>
           ) : (
-            <div className="h-28 bg-gradient-to-tr from-blue-700 via-indigo-700 to-rose-600 relative p-3.5 flex flex-col justify-between text-white">
+            <div className="h-24 sm:h-28 bg-gradient-to-tr from-blue-700 via-indigo-700 to-rose-600 relative p-3 sm:p-3.5 flex flex-col justify-between text-white shrink-0">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-black/30 backdrop-blur-md border border-white/20">
                   {selectedLandmark.category}
@@ -731,12 +731,12 @@ export function GoogleMapsSearchCard({
             </div>
           )}
 
-          <div className="p-4 space-y-3 max-h-[calc(100vh-290px)] overflow-y-auto">
+          <div className="p-3 sm:p-4 space-y-2.5 sm:space-y-3 overflow-y-auto flex-1">
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
               {selectedLandmark.description}
             </p>
 
-            <div className="grid grid-cols-1 gap-1.5 text-xs bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700/50">
+            <div className="grid grid-cols-1 gap-1.5 text-xs bg-slate-50 dark:bg-slate-800/60 p-2 sm:p-2.5 rounded-xl border border-slate-100 dark:border-slate-700/50">
               {selectedLandmark.builtYear && (
                 <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
                   <span className="text-slate-400">Built Period:</span>
@@ -779,7 +779,7 @@ export function GoogleMapsSearchCard({
                     onFlyTo(selectedLandmark.coordinates);
                   }
                 }}
-                className="flex-1 py-2.5 px-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
+                className="flex-1 py-2 sm:py-2.5 px-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
               >
                 <Navigation className="w-3.5 h-3.5 fill-white" />
                 <span>Directions & Route</span>
@@ -791,7 +791,7 @@ export function GoogleMapsSearchCard({
                 )}`}
                 target="_blank"
                 rel="noreferrer"
-                className="p-2.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="p-2 sm:p-2.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 title="View on OpenStreetMap"
               >
                 <ExternalLink className="w-4 h-4" />
