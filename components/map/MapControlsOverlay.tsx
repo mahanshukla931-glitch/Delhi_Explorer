@@ -14,7 +14,7 @@ import {
   Check,
 } from "lucide-react";
 import { LayerType, UserLocationState } from "@/types/map";
-import { MAP_LAYERS, DELHI_DEFAULT_CENTER, DELHI_DEFAULT_ZOOM } from "@/lib/constants";
+import { DELHI_DEFAULT_CENTER, DELHI_DEFAULT_ZOOM } from "@/lib/constants";
 
 interface MapControlsOverlayProps {
   activeLayer: LayerType;
@@ -121,35 +121,69 @@ export function MapControlsOverlay({
             </div>
           </button>
 
-          {/* Quick Layer Switcher Flyout */}
+          {/* Quick Layer Switcher Flyout - Google Maps Style Visual Thumbnails */}
           {showLayerMenu && (
-            <div className="absolute left-0 bottom-14 w-52 bg-white dark:bg-[#202124] rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.25)] border border-slate-200/80 dark:border-slate-700/60 p-2 z-[1000] animate-in slide-in-from-bottom-2 fade-in">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-1 mb-1">
-                Map Types
+            <div className="absolute left-0 bottom-14 w-64 bg-white/95 dark:bg-[#202124]/95 backdrop-blur-xl rounded-3xl shadow-[0_10px_35px_rgba(0,0,0,0.28)] border border-slate-200/90 dark:border-white/10 p-3 z-[1000] animate-in slide-in-from-bottom-3 fade-in select-none">
+              <div className="flex items-center justify-between mb-2 px-1">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
+                  Map Types
+                </span>
+                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">
+                  Live View
+                </span>
               </div>
-              <div className="flex flex-col gap-1">
-                {Object.values(MAP_LAYERS)
-                  .filter((layer) => layer.id !== "dark")
-                  .map((layer) => {
-                    const isSelected = activeLayer === layer.id;
-                    return (
-                      <button
-                        key={layer.id}
-                        onClick={() => {
-                          onChangeLayer(layer.id as LayerType);
-                          setShowLayerMenu(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  {
+                    id: "osm",
+                    name: "Default",
+                    icon: "🗺️",
+                    bgGradient: "from-blue-50 to-indigo-100 dark:from-blue-950/60 dark:to-indigo-900/60",
+                  },
+                  {
+                    id: "satellite",
+                    name: "Satellite",
+                    icon: "🛰️",
+                    bgGradient: "from-emerald-900 to-slate-900 text-white",
+                  },
+                  {
+                    id: "terrain",
+                    name: "Terrain",
+                    icon: "🏔️",
+                    bgGradient: "from-amber-100 to-orange-100 dark:from-amber-950/60 dark:to-orange-900/60",
+                  },
+                ].map((item) => {
+                  const isSelected = activeLayer === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        onChangeLayer(item.id as LayerType);
+                        setShowLayerMenu(false);
+                      }}
+                      className={`flex flex-col items-center p-2 rounded-2xl border-2 transition-all active:scale-95 cursor-pointer ${
+                        isSelected
+                          ? "border-blue-600 bg-blue-50/80 dark:bg-blue-950/40 shadow-sm"
+                          : "border-transparent hover:border-slate-200 dark:hover:border-slate-700 bg-slate-50 dark:bg-white/5"
+                      }`}
+                    >
+                      <div
+                        className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.bgGradient} flex items-center justify-center text-2xl shadow-inner mb-1.5`}
+                      >
+                        {item.icon}
+                      </div>
+                      <span
+                        className={`text-[11px] font-bold ${
                           isSelected
-                            ? "bg-blue-600 text-white font-semibold"
-                            : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            ? "text-blue-600 dark:text-blue-400"
+                            : "text-slate-700 dark:text-slate-300"
                         }`}
                       >
-                        <span>{layer.name}</span>
-                        {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                      </button>
-                    );
-                  })}
+                        {item.name}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
