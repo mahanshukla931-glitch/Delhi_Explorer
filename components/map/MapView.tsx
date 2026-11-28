@@ -213,8 +213,8 @@ export default function MapView({
         <TrafficLayer visible={showTraffic} />
 
         {/* Level 3: Geoman Drawing & Measurement Layer */}
-        {showDrawTools && !isNavSimActive && (
-          <GeomanDrawLayer enabled={showDrawTools && !isNavSimActive} activeColor={activeDrawColor} />
+        {!isNavSimActive && (
+          <GeomanDrawLayer enabled={showDrawTools} activeColor={activeDrawColor} />
         )}
 
         {/* Level 3: Reverse Geocoding Map Click Handler */}

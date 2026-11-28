@@ -50,6 +50,18 @@ export function GeomanDrawLayer({
 }) {
   const map = useMap();
   const drawnLayersRef = useRef<Map<string, L.Layer>>(new Map());
+  const activeColorRef = useRef(activeColor);
+
+  useEffect(() => {
+    activeColorRef.current = activeColor;
+    if (map && (map as any).pm?.setPathOptions) {
+      (map as any).pm.setPathOptions({
+        color: activeColor,
+        fillColor: activeColor,
+        fillOpacity: 0.25,
+      });
+    }
+  }, [activeColor, map]);
 
   // Attach shape popup with formatted measurement and Delete action
   const attachShapePopup = (layer: any, shape: StoredShape) => {
@@ -160,30 +172,21 @@ export function GeomanDrawLayer({
 
     const pm = (map as any).pm;
 
-    if (enabled) {
-      pm.setPathOptions({
-        color: activeColor,
-        fillColor: activeColor,
-        fillOpacity: 0.25,
-      });
-
-      pm.addControls({
-        position: "topleft",
-        drawMarker: true,
-        drawCircleMarker: false,
-        drawPolyline: true,
-        drawRectangle: true,
-        drawPolygon: true,
-        drawCircle: true,
-        editMode: true,
-        dragMode: true,
-        cutPolygon: false,
-        removalMode: true,
-      });
-    } else {
-      pm.removeControls();
+    if (!enabled) {
+      try {
+        if (pm.disableDraw) pm.disableDraw();
+        if (pm.globalEditModeEnabled && pm.globalEditModeEnabled()) pm.disableGlobalEditMode();
+        if (pm.globalRemovalModeEnabled && pm.globalRemovalModeEnabled()) pm.disableGlobalRemovalMode();
+        if (pm.removeControls) pm.removeControls();
+      } catch {}
       return;
     }
+
+    pm.setPathOptions({
+      color: activeColorRef.current,
+      fillColor: activeColorRef.current,
+      fillOpacity: 0.25,
+    });
 
     // Handle Create Shape Event
     const handleCreate = (e: any) => {
@@ -234,13 +237,17 @@ export function GeomanDrawLayer({
         type: shapeType,
         coordinates: coords,
         measurements,
-        color: activeColor,
+        color: activeColorRef.current,
         createdAt: Date.now(),
       };
 
       saveShape(stored);
       drawnLayersRef.current.set(id, layer);
       attachShapePopup(layer, stored);
+
+      // Reset draw mode in floating bar & disable draw mode
+      window.dispatchEvent(new Event("delhi_draw_reset"));
+      if (pm.disableDraw) pm.disableDraw();
     };
 
     // Handle Edit Shape Event (Persistence)
@@ -299,16 +306,80 @@ export function GeomanDrawLayer({
       }
     };
 
+    // Listen to custom drawing tool trigger events from DrawToolsFloatingBar
+    const handleToolTrigger = (e: any) => {
+      const mode = e.detail?.mode;
+      if (!pm) return;
+
+      try {
+        if (pm.disableDraw) pm.disableDraw();
+        if (pm.globalEditModeEnabled && pm.globalEditModeEnabled()) pm.disableGlobalEditMode();
+        if (pm.globalRemovalModeEnabled && pm.globalRemovalModeEnabled()) pm.disableGlobalRemovalMode();
+      } catch (err) {
+        console.warn("Geoman reset warning:", err);
+      }
+
+      if (!mode || mode === "none") return;
+
+      pm.setPathOptions({
+        color: activeColorRef.current,
+        fillColor: activeColorRef.current,
+        fillOpacity: 0.25,
+      });
+
+      try {
+        if (mode === "polygon") {
+          pm.enableDraw("Polygon", { finishOn: "dblclick", snappable: true });
+        } else if (mode === "line") {
+          pm.enableDraw("Line", { finishOn: "dblclick", snappable: true });
+        } else if (mode === "circle") {
+          pm.enableDraw("Circle");
+        } else if (mode === "rectangle") {
+          pm.enableDraw("Rectangle");
+        } else if (mode === "marker") {
+          pm.enableDraw("Marker");
+        } else if (mode === "edit") {
+          pm.enableGlobalEditMode();
+        } else if (mode === "erase") {
+          pm.enableGlobalRemovalMode();
+        }
+      } catch (err) {
+        console.error("Geoman enable mode error:", err);
+      }
+    };
+
+    // Listen to color changes
+    const handleColorChange = (e: any) => {
+      const color = e.detail?.color;
+      if (color) {
+        activeColorRef.current = color;
+        if (pm?.setPathOptions) {
+          pm.setPathOptions({
+            color,
+            fillColor: color,
+            fillOpacity: 0.25,
+          });
+        }
+      }
+    };
+
+    window.addEventListener("delhi_draw_tool_trigger", handleToolTrigger);
+    window.addEventListener("delhi_draw_color_change", handleColorChange);
     map.on("pm:create", handleCreate);
     map.on("pm:edit", handleEdit);
     map.on("pm:remove", handleRemove);
 
     return () => {
+      window.removeEventListener("delhi_draw_tool_trigger", handleToolTrigger);
+      window.removeEventListener("delhi_draw_color_change", handleColorChange);
       try {
         map.off("pm:create", handleCreate);
         map.off("pm:edit", handleEdit);
         map.off("pm:remove", handleRemove);
-        pm.removeControls();
+        if (pm.disableDraw) pm.disableDraw();
+        if (pm.globalEditModeEnabled && pm.globalEditModeEnabled()) pm.disableGlobalEditMode();
+        if (pm.globalRemovalModeEnabled && pm.globalRemovalModeEnabled()) pm.disableGlobalRemovalMode();
+        if (pm.removeControls) pm.removeControls();
       } catch {}
     };
   }, [map, enabled]);
