@@ -108,6 +108,7 @@ export function DelhiDistrictsGeoJson({
   };
 
   const onEachFeature = (feature: Feature, layer: L.Layer) => {
+    if (isDrawingActive) return;
     const props = feature.properties as unknown as DistrictProperties;
 
     // Hover Highlight & Click
@@ -160,7 +161,7 @@ export function DelhiDistrictsGeoJson({
 
   return (
     <GeoJSON
-      key={`${activeMetric}-${isDarkMode ? "dark" : "light"}-${geoData.features.length}`}
+      key={`${activeMetric}-${isDarkMode ? "dark" : "light"}-${isDrawingActive ? "draw" : "nodraw"}-${geoData.features.length}`}
       data={geoData}
       style={styleFeature}
       onEachFeature={onEachFeature}

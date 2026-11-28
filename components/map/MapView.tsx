@@ -196,9 +196,9 @@ export default function MapView({
         />
 
         {/* Level 2: Delhi 11 Districts GeoJSON Choropleth Layer */}
-        {effectiveShowDistricts && (
+        {effectiveShowDistricts && !showDrawTools && (
           <DelhiDistrictsGeoJson
-            visible={effectiveShowDistricts}
+            visible={effectiveShowDistricts && !showDrawTools}
             activeMetric={activeChoroplethMetric}
             onSelectDistrict={(props) => onSelectDistrict?.(props)}
             isDarkMode={isDarkMode}

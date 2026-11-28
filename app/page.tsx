@@ -81,7 +81,7 @@ export default function Home() {
   const [isOpenNowOnly, setIsOpenNowOnly] = useState<boolean>(false);
 
   // Level 2 State: Delhi 11 Districts GeoJSON & Choropleth
-  const [showDistrictsGeoJson, setShowDistrictsGeoJson] = useState(true);
+  const [showDistrictsGeoJson, setShowDistrictsGeoJson] = useState(false);
   const [activeChoroplethMetric, setActiveChoroplethMetric] = useState<
     "density" | "population" | "literacyRate" | "areaKm2"
   >("density");
@@ -624,7 +624,15 @@ export default function Home() {
         showHeatmap={showHeatmap}
         onToggleHeatmap={() => setShowHeatmap((prev) => !prev)}
         showDrawTools={showDrawTools}
-        onToggleDrawTools={() => setShowDrawTools((prev) => !prev)}
+        onToggleDrawTools={() => {
+          setShowDrawTools((prev) => {
+            const next = !prev;
+            if (next) {
+              setSelectedDistrict(null);
+            }
+            return next;
+          });
+        }}
         onToggleNearbyPlaces={() => setIsNearbyDrawerOpen((prev) => !prev)}
         isNearbyActive={isNearbyDrawerOpen || nearbyPlaces.length > 0}
         selectedCategory={sidebarCategory}
@@ -643,12 +651,15 @@ export default function Home() {
 
       {/* Level 2: Delhi 11 Districts Choropleth Legend & District Card with POI Bridge */}
       <ChoroplethLegend
-        visible={showDistrictsGeoJson}
+        visible={showDistrictsGeoJson && !showDrawTools}
         activeMetric={activeChoroplethMetric}
-        selectedDistrict={selectedDistrict}
+        selectedDistrict={showDrawTools ? null : selectedDistrict}
         onCloseDistrict={() => setSelectedDistrict(null)}
         onChangeMetric={setActiveChoroplethMetric}
-        onToggleVisible={() => setShowDistrictsGeoJson(false)}
+        onToggleVisible={() => {
+          setShowDistrictsGeoJson(false);
+          setSelectedDistrict(null);
+        }}
         districtPoiCount={districtPoiCount}
         onViewDistrictPlaces={handleViewDistrictPlaces}
       />
