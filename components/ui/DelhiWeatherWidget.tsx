@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   Cloud,
   Sun,
@@ -80,6 +81,11 @@ export function DelhiWeatherWidget({
   const [loading, setLoading] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string>("");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const lat = currentCoords[0];
   const lon = currentCoords[1];
@@ -269,7 +275,7 @@ export function DelhiWeatherWidget({
   const aqiInfo = useMemo(() => {
     const temp = weather?.temperature ?? 23;
     const wind = weather?.windSpeed ?? 5;
-    let aqi = 185; // Baseline winter/autumn Delhi AQI
+    let aqi = 185; // Baseline autumn/winter Delhi AQI
 
     if (wind > 15) aqi = 95;
     else if (wind > 10) aqi = 145;
@@ -324,6 +330,7 @@ export function DelhiWeatherWidget({
       <div className="relative">
         <button
           type="button"
+          aria-label="Open live weather and air quality"
           onClick={() => setIsExpanded((prev) => !prev)}
           className="bg-white/95 dark:bg-[#202124]/95 backdrop-blur-md hover:bg-white dark:hover:bg-[#202124] border border-slate-200/90 dark:border-slate-700/80 rounded-full px-3 py-1.5 shadow-[0_2px_10px_rgba(0,0,0,0.12)] flex items-center gap-2 transition-all active:scale-95 group select-none"
           title={`Click to view full Delhi live weather and air quality for ${displayName}`}
@@ -355,243 +362,249 @@ export function DelhiWeatherWidget({
           )}
         </button>
 
-        {/* Mobile Backdrop for 1-Tap Dismiss */}
-        {isExpanded && (
-          <div
-            onClick={() => setIsExpanded(false)}
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs z-40 sm:hidden"
-            aria-hidden="true"
-          />
-        )}
+        {/* Render bottom sheet directly in document.body via portal so it is never trapped by parent overflow/widths */}
+        {isExpanded && mounted && createPortal(
+          <div className="fixed inset-0 z-[9999] flex flex-col justify-end sm:block pointer-events-auto">
+            {/* Full viewport backdrop */}
+            <div
+              onClick={() => setIsExpanded(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+              aria-hidden="true"
+            />
 
-        {/* 2. Expanded Weather & AQI Flyout Card */}
-        {isExpanded && (
-          <div className="fixed top-18 left-3 right-3 sm:static sm:absolute sm:top-12 sm:left-auto sm:right-0 w-auto sm:w-[350px] max-w-sm mx-auto sm:mx-0 bg-white/98 dark:bg-[#1f2023]/98 backdrop-blur-2xl rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.25)] border border-slate-200/90 dark:border-slate-700/80 overflow-hidden z-50 animate-in fade-in slide-in-from-top-3 duration-250 select-none">
-            {/* Header with clean locality name */}
-            <div className="px-4 py-3 bg-gradient-to-b from-slate-50 dark:from-slate-800/60 to-transparent border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center shrink-0">
-                  <MapPin className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                    {displayName}
-                  </h3>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                    Live Atmospheric Sensors
-                  </p>
-                </div>
-              </div>
+            {/* Mobile Bottom Sheet (Full width, rounded-t-3xl) & Desktop Modal */}
+            <div className="relative w-full sm:w-[380px] sm:fixed sm:top-16 sm:right-6 sm:bottom-auto bg-white dark:bg-[#1a1b1e] rounded-t-[32px] sm:rounded-3xl shadow-[0_-12px_45px_rgba(0,0,0,0.4)] sm:shadow-[0_20px_60px_rgba(0,0,0,0.3)] border-t sm:border border-slate-200/90 dark:border-slate-800 z-10 animate-in slide-in-from-bottom sm:slide-in-from-top-2 duration-250 select-none flex flex-col max-h-[85vh] overflow-hidden">
+              {/* Mobile Top Drag Indicator */}
+              <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto mt-3 mb-1 sm:hidden shrink-0" />
 
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={fetchLiveWeather}
-                  disabled={loading}
-                  title="Refresh weather"
-                  className="p-1.5 rounded-full text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsExpanded(false)}
-                  className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  aria-label="Close weather card"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-4 space-y-3.5 max-h-[75vh] overflow-y-auto scrollbar-thin">
-              {/* Main Weather Hero Card with dynamic background */}
-              <div
-                className={`p-3.5 rounded-2xl bg-gradient-to-br ${info.gradient} border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between relative overflow-hidden`}
-              >
-                <div>
-                  <div className="text-4xl font-black text-slate-900 dark:text-white tracking-tight flex items-start">
-                    <span>{weather?.temperature ?? "--"}</span>
-                    <span className="text-lg font-bold text-slate-400 mt-1">°C</span>
+              {/* Header */}
+              <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white dark:bg-[#1a1b1e]">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-7 h-7 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-200/60 dark:border-rose-900/40">
+                    <MapPin className="w-4 h-4" />
                   </div>
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">
-                    {info.label}
-                  </p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Feels like {weather?.apparentTemperature ?? "--"}°C • H:{" "}
-                    {weather?.todayMax ?? "--"}° L: {weather?.todayMin ?? "--"}°
-                  </p>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                      {displayName}
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Live Atmospheric Sensors
+                    </p>
+                  </div>
                 </div>
 
-                <div className="text-4xl drop-shadow-md select-none transform hover:scale-110 transition-transform">
-                  {info.emoji}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={fetchLiveWeather}
+                    disabled={loading}
+                    title="Refresh weather"
+                    className="p-2 rounded-xl text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsExpanded(false)}
+                    className="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    aria-label="Close weather card"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
-              {/* Delhi Air Quality Index (AQI) Section */}
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <Gauge className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      Delhi Air Quality (AQI)
+              {/* Scrollable Body */}
+              <div className="p-5 space-y-4 overflow-y-auto scrollbar-thin pb-8 sm:pb-5">
+                {/* Main Weather Hero Card with high-contrast text & dynamic gradient */}
+                <div
+                  className={`p-4 rounded-2xl bg-gradient-to-br ${info.gradient} border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between relative overflow-hidden shadow-xs`}
+                >
+                  <div>
+                    <div className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight flex items-start">
+                      <span>{weather?.temperature ?? "--"}</span>
+                      <span className="text-xl font-bold text-slate-500 dark:text-slate-400 mt-1">°C</span>
+                    </div>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">
+                      {info.label}
+                    </p>
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mt-0.5">
+                      Feels like {weather?.apparentTemperature ?? "--"}°C • H:{" "}
+                      {weather?.todayMax ?? "--"}° L: {weather?.todayMin ?? "--"}°
+                    </p>
+                  </div>
+
+                  <div className="text-5xl drop-shadow-md select-none transform hover:scale-110 transition-transform">
+                    {info.emoji}
+                  </div>
+                </div>
+
+                {/* Delhi Air Quality Index (AQI) Section */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Gauge className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">
+                        Delhi Air Quality (AQI)
+                      </span>
+                    </div>
+                    <span
+                      className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border shadow-xs ${aqiInfo.badgeClass}`}
+                    >
+                      {aqiInfo.aqi} • {aqiInfo.status}
                     </span>
                   </div>
-                  <span
-                    className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${aqiInfo.badgeClass}`}
-                  >
-                    {aqiInfo.aqi} • {aqiInfo.status}
-                  </span>
-                </div>
 
-                {/* Progress bar scale */}
-                <div className="space-y-1">
-                  <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden relative">
-                    <div
-                      className={`h-full ${aqiInfo.barColor} transition-all duration-500 rounded-full`}
-                      style={{ width: `${Math.min(100, Math.max(10, aqiInfo.barPercent))}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-[9px] text-slate-400 font-semibold px-0.5">
-                    <span>Good (0)</span>
-                    <span>Moderate (100-200)</span>
-                    <span>Severe (300+)</span>
-                  </div>
-                </div>
-
-                <p className="text-[10.5px] text-slate-600 dark:text-slate-300 leading-tight">
-                  {aqiInfo.advice}
-                </p>
-              </div>
-
-              {/* Weather Metrics 4-Grid */}
-              <div className="grid grid-cols-4 gap-2">
-                {/* Humidity */}
-                <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-center">
-                  <Droplets className="w-3.5 h-3.5 text-blue-500 mx-auto mb-1" />
-                  <span className="text-[10px] text-slate-400 block font-medium">Humidity</span>
-                  <span className="text-xs font-bold text-slate-800 dark:text-white">
-                    {weather?.humidity ?? "--"}%
-                  </span>
-                </div>
-
-                {/* Wind */}
-                <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-center">
-                  <Wind className="w-3.5 h-3.5 text-teal-500 mx-auto mb-1" />
-                  <span className="text-[10px] text-slate-400 block font-medium">Wind</span>
-                  <span className="text-xs font-bold text-slate-800 dark:text-white">
-                    {weather?.windSpeed ?? "--"} km/h
-                  </span>
-                </div>
-
-                {/* UV Index */}
-                <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-center">
-                  <Sun className="w-3.5 h-3.5 text-amber-500 mx-auto mb-1" />
-                  <span className="text-[10px] text-slate-400 block font-medium">UV Index</span>
-                  <span className="text-xs font-bold text-slate-800 dark:text-white">
-                    {weather?.uvIndex ?? "--"}
-                  </span>
-                </div>
-
-                {/* Sun Cycle */}
-                <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-center">
-                  <Sunset className="w-3.5 h-3.5 text-orange-500 mx-auto mb-1" />
-                  <span className="text-[10px] text-slate-400 block font-medium">Sunset</span>
-                  <span className="text-[10px] font-bold text-slate-800 dark:text-white truncate block">
-                    {weather?.sunset ?? "--"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Hourly Forecast Timeline Carousel */}
-              {weather?.hourly && weather.hourly.length > 0 && (
-                <div className="space-y-1.5">
-                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">
-                    Hourly Forecast
-                  </span>
-                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none no-scrollbar">
-                    {weather.hourly.map((hour, idx) => {
-                      const hInfo = getWeatherInfo(hour.code, 1);
-                      return (
-                        <div
-                          key={idx}
-                          className="px-2.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex flex-col items-center shrink-0 min-w-[54px] text-center"
-                        >
-                          <span className="text-[10px] text-slate-400 font-medium">
-                            {hour.timeStr}
-                          </span>
-                          <span className="text-base my-1">{hInfo.emoji}</span>
-                          <span className="text-xs font-bold text-slate-800 dark:text-white">
-                            {hour.temp}°
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* 3-Day Outlook */}
-              {weather?.daily && weather.daily.length > 0 && (
-                <div className="space-y-1.5">
-                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">
-                    3-Day Outlook
-                  </span>
+                  {/* Progress bar scale */}
                   <div className="space-y-1">
-                    {weather.daily.map((day, idx) => {
-                      const dInfo = getWeatherInfo(day.code, 1);
-                      return (
-                        <div
-                          key={idx}
-                          className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs"
-                        >
-                          <span className="font-semibold text-slate-700 dark:text-slate-300 w-20">
-                            {day.dayLabel}
-                          </span>
-                          <span className="text-base">{dInfo.emoji}</span>
-                          <div className="flex items-center gap-2 text-right">
-                            <span className="text-slate-400 text-[11px] font-medium">
-                              {day.minTemp}°
+                    <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden relative">
+                      <div
+                        className={`h-full ${aqiInfo.barColor} transition-all duration-500 rounded-full`}
+                        style={{ width: `${Math.min(100, Math.max(10, aqiInfo.barPercent))}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400 font-semibold px-0.5">
+                      <span>Good (0)</span>
+                      <span>Moderate (100-200)</span>
+                      <span>Severe (300+)</span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-snug">
+                    {aqiInfo.advice}
+                  </p>
+                </div>
+
+                {/* Weather Metrics 4-Grid */}
+                <div className="grid grid-cols-4 gap-2">
+                  {/* Humidity */}
+                  <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 text-center">
+                    <Droplets className="w-4 h-4 text-blue-500 mx-auto mb-1" />
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Humidity</span>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">
+                      {weather?.humidity ?? "--"}%
+                    </span>
+                  </div>
+
+                  {/* Wind */}
+                  <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 text-center">
+                    <Wind className="w-4 h-4 text-teal-500 mx-auto mb-1" />
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Wind</span>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">
+                      {weather?.windSpeed ?? "--"} km/h
+                    </span>
+                  </div>
+
+                  {/* UV Index */}
+                  <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 text-center">
+                    <Sun className="w-4 h-4 text-amber-500 mx-auto mb-1" />
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">UV Index</span>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">
+                      {weather?.uvIndex ?? "--"}
+                    </span>
+                  </div>
+
+                  {/* Sun Cycle */}
+                  <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 text-center">
+                    <Sunset className="w-4 h-4 text-orange-500 mx-auto mb-1" />
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Sunset</span>
+                    <span className="text-[10px] font-bold text-slate-900 dark:text-white truncate block">
+                      {weather?.sunset ?? "--"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Hourly Forecast Timeline Carousel */}
+                {weather?.hourly && weather.hourly.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                      Hourly Forecast
+                    </span>
+                    <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none no-scrollbar">
+                      {weather.hourly.map((hour, idx) => {
+                        const hInfo = getWeatherInfo(hour.code, 1);
+                        return (
+                          <div
+                            key={idx}
+                            className="px-3 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 flex flex-col items-center shrink-0 min-w-[58px] text-center"
+                          >
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                              {hour.timeStr}
                             </span>
-                            <div className="w-12 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                              <div className="w-full h-full bg-gradient-to-r from-blue-400 to-amber-400 rounded-full" />
-                            </div>
-                            <span className="font-bold text-slate-800 dark:text-white">
-                              {day.maxTemp}°
+                            <span className="text-lg my-1">{hInfo.emoji}</span>
+                            <span className="text-xs font-bold text-slate-900 dark:text-white">
+                              {hour.temp}°
                             </span>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
+                )}
+
+                {/* 3-Day Outlook */}
+                {weather?.daily && weather.daily.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                      3-Day Outlook
+                    </span>
+                    <div className="space-y-1.5">
+                      {weather.daily.map((day, idx) => {
+                        const dInfo = getWeatherInfo(day.code, 1);
+                        return (
+                          <div
+                            key={idx}
+                            className="px-3.5 py-2 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 flex items-center justify-between text-xs"
+                          >
+                            <span className="font-semibold text-slate-900 dark:text-white w-20">
+                              {day.dayLabel}
+                            </span>
+                            <span className="text-base">{dInfo.emoji}</span>
+                            <div className="flex items-center gap-2.5 text-right">
+                              <span className="text-slate-500 dark:text-slate-400 text-[11px] font-medium">
+                                {day.minTemp}°
+                              </span>
+                              <div className="w-14 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                                <div className="w-full h-full bg-gradient-to-r from-blue-400 to-amber-400 rounded-full" />
+                              </div>
+                              <span className="font-bold text-slate-900 dark:text-white">
+                                {day.maxTemp}°
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Center Map on Location Action */}
+                {onFlyToCoords && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onFlyToCoords([lat, lon]);
+                      setIsExpanded(false);
+                    }}
+                    className="w-full py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-98 transition-all shrink-0"
+                  >
+                    <Compass className="w-4 h-4" />
+                    <span>Center Map on {displayName.split(",")[0]}</span>
+                  </button>
+                )}
+
+                {/* Footer Coordinates & Timestamp */}
+                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                  <span className="flex items-center gap-1 font-mono">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                    {lat.toFixed(2)}°N, {lon.toFixed(2)}°E
+                  </span>
+                  <span>Updated: {lastUpdated}</span>
                 </div>
-              )}
-
-              {/* Center Map on Delhi Coordinates Action */}
-              {onFlyToCoords && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onFlyToCoords([lat, lon]);
-                    setIsExpanded(false);
-                  }}
-                  className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-98 transition-all"
-                >
-                  <Compass className="w-4 h-4" />
-                  <span>Center Map on {displayName.split(",")[0]}</span>
-                </button>
-              )}
-
-              {/* Footer Coordinates & Timestamp */}
-              <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
-                <span className="flex items-center gap-1 font-mono">
-                  <MapPin className="w-3 h-3 text-slate-400" />
-                  {lat.toFixed(2)}°N, {lon.toFixed(2)}°E
-                </span>
-                <span>Updated: {lastUpdated}</span>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>
