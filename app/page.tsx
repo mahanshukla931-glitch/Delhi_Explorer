@@ -58,9 +58,10 @@ export default function Home() {
   >("density");
   const [selectedDistrict, setSelectedDistrict] = useState<DistrictProperties | null>(null);
 
-  // Delhi Metro & Traffic State
+  // Delhi Metro, Traffic & Heatmap State
   const [showMetroLines, setShowMetroLines] = useState(true);
   const [showTraffic, setShowTraffic] = useState(true);
+  const [showHeatmap, setShowHeatmap] = useState(false);
 
   // Level 3: Navigation & Routing State
   const [activeRoute, setActiveRoute] = useState<RouteData | null>(null);
@@ -577,6 +578,8 @@ export default function Home() {
         onRequestDirections={(coords, name) => handleCalculateRoute(coords, name)}
         showTraffic={showTraffic}
         onToggleTraffic={() => setShowTraffic((prev) => !prev)}
+        showHeatmap={showHeatmap}
+        onToggleHeatmap={() => setShowHeatmap((prev) => !prev)}
         showDrawTools={showDrawTools}
         onToggleDrawTools={() => setShowDrawTools((prev) => !prev)}
         onToggleNearbyPlaces={() => setIsNearbyDrawerOpen((prev) => !prev)}
@@ -644,6 +647,8 @@ export default function Home() {
         totalMarkersCount={allMarkers.length || 1200}
         showTraffic={showTraffic}
         onToggleTraffic={() => setShowTraffic((prev) => !prev)}
+        showHeatmap={showHeatmap}
+        onToggleHeatmap={() => setShowHeatmap((prev) => !prev)}
         showDrawTools={showDrawTools}
         onToggleDrawTools={() => setShowDrawTools((prev) => !prev)}
         onOpenNearby={() => setIsNearbyDrawerOpen(true)}
@@ -724,6 +729,7 @@ export default function Home() {
               setIsDirectionsDrawerOpen(false);
             }}
             showTraffic={showTraffic}
+            showHeatmap={showHeatmap}
             showDrawTools={showDrawTools}
             activeDrawColor={activeDrawColor}
             nearbyPlaces={nearbyPlaces}

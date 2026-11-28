@@ -46,6 +46,8 @@ interface GoogleMapsSearchCardProps {
   onRequestDirections?: (coords: [number, number], name: string) => void;
   showTraffic?: boolean;
   onToggleTraffic?: () => void;
+  showHeatmap?: boolean;
+  onToggleHeatmap?: () => void;
   showDrawTools?: boolean;
   onToggleDrawTools?: () => void;
   onToggleNearbyPlaces?: () => void;
@@ -95,6 +97,8 @@ export function GoogleMapsSearchCard({
   onRequestDirections,
   showTraffic = true,
   onToggleTraffic,
+  showHeatmap = false,
+  onToggleHeatmap,
   showDrawTools,
   onToggleDrawTools,
   onToggleNearbyPlaces,
@@ -454,6 +458,21 @@ export function GoogleMapsSearchCard({
               className="relative pointer-events-auto shrink-0"
             />
           </div>
+        )}
+
+        {/* Level 4: Heatmap Toggle Chip */}
+        {onToggleHeatmap && (
+          <button
+            onClick={onToggleHeatmap}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm flex items-center gap-1.5 shrink-0 active:scale-95 transition-all ${
+              showHeatmap
+                ? "bg-gradient-to-r from-orange-500 to-rose-600 text-white ring-2 ring-rose-400/40"
+                : "bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <span>🔥</span>
+            <span>Heatmap</span>
+          </button>
         )}
 
         {/* Live Delhi Traffic Chip */}

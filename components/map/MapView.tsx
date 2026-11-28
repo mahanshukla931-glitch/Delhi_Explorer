@@ -20,6 +20,7 @@ import { MapControlsOverlay } from "./MapControlsOverlay";
 import { MapEventsHandler } from "./MapEventsHandler";
 import { DelhiDistrictsGeoJson } from "./DelhiDistrictsGeoJson";
 import { MarkerClusterLayer } from "./MarkerClusterLayer";
+import { LeafletHeatLayer } from "./LeafletHeatLayer";
 import { DelhiMetroLayer } from "./DelhiMetroLayer";
 import { TrafficLayer } from "./TrafficLayer";
 import { MapRouteLayer } from "./MapRouteLayer";
@@ -55,6 +56,7 @@ interface MapViewProps {
   activeChoroplethMetric?: "density" | "population" | "literacyRate" | "areaKm2";
   onSelectDistrict?: (props: DistrictProperties | null) => void;
   showMarkerClusters?: boolean;
+  showHeatmap?: boolean;
   clusterMarkers?: MarkerPoi[];
   selectedClusterMarkerId?: string | null;
   onSelectClusterMarker?: (marker: MarkerPoi) => void;
@@ -87,6 +89,7 @@ export default function MapView({
   activeChoroplethMetric = "density",
   onSelectDistrict,
   showMarkerClusters = true,
+  showHeatmap = false,
   clusterMarkers = [],
   selectedClusterMarkerId = null,
   onSelectClusterMarker,
@@ -137,6 +140,16 @@ export default function MapView({
             setCenterCoords(center);
             setMapZoom(zoom);
             onMapCenterChange?.(center);
+
+            // Level 4: Seamlessly sync map state to browser URL without re-rendering or page reload
+            if (typeof window !== "undefined" && window.history?.replaceState) {
+              const url = new URL(window.location.href);
+              url.searchParams.set("lat", center[0].toFixed(4));
+              url.searchParams.set("lng", center[1].toFixed(4));
+              url.searchParams.set("z", zoom.toString());
+              url.searchParams.set("layer", activeLayer);
+              window.history.replaceState({}, "", url.toString());
+            }
           }}
           onMouseMove={(coords) => {
             setCursorCoords(coords);
@@ -187,6 +200,11 @@ export default function MapView({
             route={activeRoute}
             onClearRoute={() => onClearRoute?.()}
           />
+        )}
+
+        {/* Level 4: Heatmap Density Layer (leaflet.heat) */}
+        {showHeatmap && clusterMarkers && clusterMarkers.length > 0 && (
+          <LeafletHeatLayer markers={clusterMarkers} visible={showHeatmap} />
         )}
 
         {/* Level 2: 1,200+ Marker Clustering Layer */}

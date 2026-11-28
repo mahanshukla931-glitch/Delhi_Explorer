@@ -36,6 +36,8 @@ interface GoogleMapsDrawerProps {
   totalMarkersCount?: number;
   showTraffic?: boolean;
   onToggleTraffic?: () => void;
+  showHeatmap?: boolean;
+  onToggleHeatmap?: () => void;
   showDrawTools?: boolean;
   onToggleDrawTools?: () => void;
   onOpenNearby?: () => void;
@@ -59,6 +61,8 @@ export function GoogleMapsDrawer({
   totalMarkersCount = 1200,
   showTraffic = true,
   onToggleTraffic,
+  showHeatmap = false,
+  onToggleHeatmap,
   showDrawTools = false,
   onToggleDrawTools,
   onOpenNearby,
@@ -330,6 +334,35 @@ export function GoogleMapsDrawer({
                     showMarkerClusters ? "bg-rose-600 justify-end" : "bg-slate-300 dark:bg-slate-600 justify-start"
                   }`}
                   aria-label="Toggle Marker Clustering"
+                >
+                  <div className="w-5 h-5 rounded-full bg-white shadow-xs" />
+                </button>
+              </div>
+            )}
+
+            {/* Level 4: Heatmap Density Layer Switch */}
+            {onToggleHeatmap && (
+              <div className="p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 flex items-center justify-center shadow-2xs text-sm">
+                    🔥
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block leading-tight">
+                      Heatmap Density Layer
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      Visual intensity of 1,200+ places (leaflet.heat)
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={onToggleHeatmap}
+                  className={`w-11 h-6 flex items-center rounded-full p-0.5 cursor-pointer transition-colors ${
+                    showHeatmap ? "bg-orange-600 justify-end" : "bg-slate-300 dark:bg-slate-600 justify-start"
+                  }`}
+                  aria-label="Toggle Heatmap Density Layer"
                 >
                   <div className="w-5 h-5 rounded-full bg-white shadow-xs" />
                 </button>
